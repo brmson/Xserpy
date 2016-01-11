@@ -34,6 +34,12 @@ def ner_tag(questions):
         tagged.append(st_ner.tag(text))
     return tagged
 
+def pos_tag(questions):
+    tagged = []
+    for q in questions:
+        tagged.append(nltk.pos_tag(q.utterance.split()))
+    return tagged
+
 if __name__  == "__main__":
     parser = argparse.ArgumentParser(description="Annotate questions with DAGs")
     parser.add_argument("fpath",help="filepath",type=str)
