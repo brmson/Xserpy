@@ -1,6 +1,6 @@
 from annotator import Question,object_decoder
 from nltk import StanfordNERTagger
-import nltk,os,argparse
+import nltk,os,argparse,json
 
 def ner_tag(questions):
     path = 'C:\\Users\Martin\\PycharmProjects\\xserpy\\stanford-nlp\\'
@@ -19,9 +19,12 @@ def pos_tag(questions):
         tagged.append(nltk.pos_tag(q.utterance.split()))
     return tagged
 
-if __name == "__main__"
+def load_questions(fpath):
+    return json.load(open(fpath),object_hook=object_decoder)
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Annotate questions with DAGs")
     parser.add_argument("fpath",help="filepath",type=str)
     parser.add_argument("start",help="start",type=int,default=0)
     args = parser.parse_args()
-    questions = json.load(open(args.fpath),object_hook=object_decoder)
+    questions = load_questions(args.fpath)
