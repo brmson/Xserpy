@@ -1,4 +1,4 @@
-import argparse,json
+import argparse,json,pickle
 
 class Question(object):
     def __init__(self, utterance, targetFormula):
@@ -8,7 +8,7 @@ class Question(object):
 def object_decoder(obj):
     return Question(obj['utterance'], obj['targetFormula'])
 
-def annotate_questions(questions,start):
+def annotate_questions_dag(questions,start):
     i = start
     for q in questions:
         M = []
@@ -23,10 +23,26 @@ def annotate_questions(questions,start):
         i += 1
 
 
-if __name__  == "__main__":
+def annotate_questions_label(questions):
+    labeled = []
+    for q in questions[:19]:
+        print q.utterance
+        L = []
+        # print range(len(q.utterance.split()))
+        l = q.utterance.split()
+        # print list(enumerate(l))
+        for word in l:
+            label = raw_input(word+" ")
+            L.append(label)
+        # print M
+        labeled.append(L)
+    pickle.dump(labeled,open("questions_train.pickle","wb"))
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Annotate questions with DAGs")
     parser.add_argument("fpath",help="filepath",type=str)
     parser.add_argument("start",help="start",type=int,default=0)
     args = parser.parse_args()
+
     questions = json.load(open(args.fpath),object_hook=object_decoder)
-    # annotate_questions(questions[args.start:],args.start)
+    annotate_questions_label(questions)
