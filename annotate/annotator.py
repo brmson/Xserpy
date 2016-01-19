@@ -25,18 +25,16 @@ def annotate_questions_dag(questions,start):
 
 def annotate_questions_label(questions):
     labeled = []
-    for q in questions[:19]:
+    dic = {'e': 0,'r': 1,'c': 2,'v': 3,'n': 4}
+    for q in questions[50:70]:
         print q.utterance
         L = []
-        # print range(len(q.utterance.split()))
         l = q.utterance.split()
-        # print list(enumerate(l))
         for word in l:
             label = raw_input(word+" ")
-            L.append(label)
         # print M
         labeled.append(L)
-    pickle.dump(labeled,open("questions_train.pickle","wb"))
+    pickle.dump(labeled,open("questions_train_51_70.pickle","wb"))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Annotate questions with DAGs")
