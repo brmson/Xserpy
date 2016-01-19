@@ -3,20 +3,20 @@ from nltk import StanfordNERTagger
 
 from annotator import object_decoder
 
-def uni_bi_tri(l,tagdict,ls,j):
+def uni_bi_tri(l,dictionary,ls,j):
     u = [0]*l
-    u[tagdict[ls[j][1]]] = 1
+    u[dictionary[ls[j][1]]] = 1
 
     bl = l**2
     b = bl * 2 * [0]
-    b[sub2ind(tagdict[ls[j-1][1]],tagdict[ls[j][1]],0,l)] = 1
-    b[sub2ind(tagdict[ls[j][1]],tagdict[ls[j+1][1]],0,l) + bl] = 1
+    b[sub2ind(dictionary[ls[j-1][1]],dictionary[ls[j][1]],0,l)] = 1
+    b[sub2ind(dictionary[ls[j][1]],dictionary[ls[j+1][1]],0,l) + bl] = 1
 
     tl = l*bl
     t = tl * 3 * [0]
-    t[sub2ind(tagdict[ls[j-2][1]],tagdict[ls[j-1][1]],tagdict[ls[j][1]],l)] = 1
-    t[sub2ind(tagdict[ls[j-1][1]],tagdict[ls[j][1]],tagdict[ls[j+1][1]],l) + tl] = 1
-    t[sub2ind(tagdict[ls[j][1]],tagdict[ls[j+1][1]],tagdict[ls[j+2][1]],l) + 2*tl] = 1
+    t[sub2ind(dictionary[ls[j-2][1]],dictionary[ls[j-1][1]],dictionary[ls[j][1]],l)] = 1
+    t[sub2ind(dictionary[ls[j-1][1]],dictionary[ls[j][1]],dictionary[ls[j+1][1]],l) + tl] = 1
+    t[sub2ind(dictionary[ls[j][1]],dictionary[ls[j+1][1]],dictionary[ls[j+2][1]],l) + 2*tl] = 1
     return u + b + t
 
 def sub2ind(x,y,z,l):
@@ -57,12 +57,12 @@ def construct_features(questions):
 
     # ner_tagged = ner_tag(questions)
 
-    words = list(enumerate([item for sublist in [q.utterance.split() for q in questions] for item in sublist]))
+    words = list(enumerate(['','']+[item for sublist in [q.utterance.split() for q in questions] for item in sublist]+['','']))
     worddict = dict([(item,index) for index,item in words])
     w = len(words)
 
     # labeled = pickle.load(open("questions_train.pickle"))
-    word_index = 0
+    word_index = 2
     features = []
 
     for i in range(len(questions)):
@@ -72,8 +72,7 @@ def construct_features(questions):
         # ner = ner_tagged[i]
         # u = question.utterance.split()
 
-        for j in range(len(pos)):
-            print j
+        for j in range(2,len(pos)-2):
             p_f = uni_bi_tri(p,tagdict,pos,j)
             w_f = uni_bi_tri(w,worddict,words,word_index)
 
