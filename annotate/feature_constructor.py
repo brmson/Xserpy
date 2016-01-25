@@ -12,12 +12,12 @@ def uni_bi_tri(l,dictionary,ls,j):
     b[sub2ind(dictionary[ls[j-1][1]],dictionary[ls[j][1]],0,l)] = 1
     b[sub2ind(dictionary[ls[j][1]],dictionary[ls[j+1][1]],0,l) + bl] = 1
 
-    tl = l*bl
-    t = tl * 3 * [0]
-    t[sub2ind(dictionary[ls[j-2][1]],dictionary[ls[j-1][1]],dictionary[ls[j][1]],l)] = 1
-    t[sub2ind(dictionary[ls[j-1][1]],dictionary[ls[j][1]],dictionary[ls[j+1][1]],l) + tl] = 1
-    t[sub2ind(dictionary[ls[j][1]],dictionary[ls[j+1][1]],dictionary[ls[j+2][1]],l) + 2*tl] = 1
-    return u + b + t
+    # tl = l*bl
+    # t = tl * 3 * [0]
+    # t[sub2ind(dictionary[ls[j-2][1]],dictionary[ls[j-1][1]],dictionary[ls[j][1]],l)] = 1
+    # t[sub2ind(dictionary[ls[j-1][1]],dictionary[ls[j][1]],dictionary[ls[j+1][1]],l) + tl] = 1
+    # t[sub2ind(dictionary[ls[j][1]],dictionary[ls[j+1][1]],dictionary[ls[j+2][1]],l) + 2*tl] = 1
+    return u + b # + t
 
 def sub2ind(x,y,z,l):
     return x + l * (y + l * z)
@@ -49,15 +49,18 @@ def pos_tag(questions):
     return tagged
 
 def construct_features(questions):
+    path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\"
     tagdict = dict([(item,index) for index,item in list(enumerate(nltk.data.load('help\\tagsets\\upenn_tagset.pickle').keys()))])
     tagdict[''] = 36
 
     p = len(tagdict.keys())
-    pos_tagged = pickle.load(open("C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\pos_tagged.pickle"))
+    pos_tagged = pickle.load(open(path + "pos_tagged.pickle"))
 
+    l = 5
+    labels = pickle.load(open(path + "questions_trn_90.pickle"))
     # ner_tagged = ner_tag(questions)
 
-    words = list(enumerate(['','']+[item for sublist in [q.utterance.split() for q in questions] for item in sublist]+['','']))
+    words = list(enumerate(['','']+list(set([item for sublist in [q.utterance.split() for q in questions] for item in sublist]))+['','']))
     worddict = dict([(item,index) for index,item in words])
     w = len(words)
 
@@ -66,19 +69,31 @@ def construct_features(questions):
     features = []
 
     for i in range(len(questions)):
-        # question = questions[i]
+        question = questions[i]
         pos = [('',''),('','')] + pos_tagged[i] + [('',''),('','')]
 
         # ner = ner_tagged[i]
-        # u = question.utterance.split()
+        u = question.utterance.split()
+
+        lab = [4,4] + labels[i]
 
         for j in range(2,len(pos)-2):
             p_f = uni_bi_tri(p,tagdict,pos,j)
-            w_f = uni_bi_tri(w,worddict,words,word_index)
+            w_f = w*[0]
+            print u,pos
+            # print u[j-2]
+            w_f[worddict[u[j-2]]] = 1  # uni_bi_tri(w,worddict,words,word_index)
 
             word_index += 1
             # n_f = [0]
-            features.append(p_f + w_f)
+
+            l_f = l*[0]
+            l_f[lab[j-1]] = 1
+
+            l_fb = w*l*[0]
+            l_fb[lab[j-1]*w+worddict[u[j-2]]] = 1
+
+            features.append(p_f + w_f + l_f + l_fb)
     return features
 
 def load_questions(fpath):
@@ -90,7 +105,5 @@ if __name__ == "__main__":
     parser.add_argument("start",help="start",type=int,default=0)
     args = parser.parse_args()
     questions = load_questions(args.fpath)
-    # ner_tagged = ner_tag(questions)
-    # pickle.dump(ner_tagged,open("ner_tagged.pickle","wb"))
-    c = construct_features(questions[:3])
-    # print ""
+    c = construct_features(questions[:90])
+    pickle.dump(c,open("phrase_detect_features.pickle","wb"))
