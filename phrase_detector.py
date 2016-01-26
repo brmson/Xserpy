@@ -1,35 +1,12 @@
 import argparse,pickle,random
 from collections import defaultdict
 
-def generate_candidates():
-    # dic = {'e': 0,'r': 1,'c': 2,'v': 3,'n': 4}
-    candidates = []
-    w = 366
-    l = 5
-    n = 2260
-    for i in range(50):
-        y = n*[0]
-        y[random.randint(0,l-1)] = 1
-
-        y[random.randint(l,l+(l**2)-1)] = 1
-        y[random.randint(l+l**2,l+2*(l**2)-1)] = 1
-
-        s = l + 2*(l**2)
-        y[random.randint(s,s+(l**3)-1)] = 1
-        y[random.randint(s+l**3,s+2*(l**3)-1)] = 1
-        y[random.randint(s+2*(l**3),s+3*(l**3)-1)] = 1
-
-        e = 3*(l**3) + w*l + s -1
-        s = s+3*(l**3)
-        y[random.randint(s,e)] = 1
-        candidates.append(y)
-    return candidates
-
 def find_argmax(w,candidates):
     L = [sum([a*b for a,b in zip(w,candidate)]) for candidate in candidates]
     return candidates[L.index(max(L))]
 
-def predict(weights,features,classes):
+def predict(weights,features):
+    classes = range(5)
     scores = defaultdict(float)
     for feat in features:
         if feat not in weights:
@@ -51,7 +28,7 @@ def train(n_iter, examples):
     for i in range(n_iter):
         err = 0
         for features, true in examples:
-            guess = predict(weights,features,range(5))
+            guess = predict(weights,features)
             if guess != true:
                 for f in features:
                     weights[f][true] += learning_rate
