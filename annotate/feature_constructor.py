@@ -101,6 +101,8 @@ def create_features(questions):
 
     pos_tagged = pickle.load(open(path + "pos_tagged.pickle"))
 
+    ner_tagged = pickle.load(open(path + "ner_tagged.pickle"))
+
     labels = pickle.load(open(path + "questions_trn_90.pickle"))
 
     features = []
@@ -108,6 +110,7 @@ def create_features(questions):
         question = questions[i]
         u = ["",""]+question.utterance.split()+["",""]
         p = ['','']+[pp[1] for pp in pos_tagged[i]]+['','']
+        n = ['','']+[nn[1] for nn in ner_tagged[i]]+['','']
         l = [4,4]+labels[i]+[4,4]
         for j in range(2,len(u)-2):
             feature = {}
@@ -125,6 +128,13 @@ def create_features(questions):
             feature["p_t_"+p[j-1]+"_"+p[j-1]+"_"+p[j]] = 1
             feature["p_t_"+p[j-1]+"_"+p[j]+"_"+p[j+1]] = 1
             feature["p_t_"+p[j]+"_"+p[j+1]+"_"+p[j+2]] = 1
+
+            feature["n_u_"+n[j]] = 1
+            feature["n_b_"+n[j-1]+"_"+n[j]] = 1
+            feature["n_b_"+n[j]+"_"+n[j+1]] = 1
+            feature["n_t_"+n[j-1]+"_"+n[j-1]+"_"+n[j]] = 1
+            feature["n_t_"+n[j-1]+"_"+n[j]+"_"+n[j+1]] = 1
+            feature["n_t_"+n[j]+"_"+n[j+1]+"_"+n[j+2]] = 1
 
             feature["l_"+str(l[j-1])] = 1
             feature["l_w_"+str(l[j-1])+"_"+u[j]] = 1
