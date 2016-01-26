@@ -12,12 +12,12 @@ def uni_bi_tri(l,dictionary,ls,j):
     b[sub2ind(dictionary[ls[j-1][1]],dictionary[ls[j][1]],0,l)] = 1
     b[sub2ind(dictionary[ls[j][1]],dictionary[ls[j+1][1]],0,l) + bl] = 1
 
-    # tl = l*bl
-    # t = tl * 3 * [0]
-    # t[sub2ind(dictionary[ls[j-2][1]],dictionary[ls[j-1][1]],dictionary[ls[j][1]],l)] = 1
-    # t[sub2ind(dictionary[ls[j-1][1]],dictionary[ls[j][1]],dictionary[ls[j+1][1]],l) + tl] = 1
-    # t[sub2ind(dictionary[ls[j][1]],dictionary[ls[j+1][1]],dictionary[ls[j+2][1]],l) + 2*tl] = 1
-    return u + b # + t
+    tl = l*bl
+    t = tl * 3 * [0]
+    t[sub2ind(dictionary[ls[j-2][1]],dictionary[ls[j-1][1]],dictionary[ls[j][1]],l)] = 1
+    t[sub2ind(dictionary[ls[j-1][1]],dictionary[ls[j][1]],dictionary[ls[j+1][1]],l) + tl] = 1
+    t[sub2ind(dictionary[ls[j][1]],dictionary[ls[j+1][1]],dictionary[ls[j+2][1]],l) + 2*tl] = 1
+    return u + b + t
 
 def sub2ind(x,y,z,l):
     return x + l * (y + l * z)
@@ -53,11 +53,13 @@ def construct_features(questions):
     tagdict = dict([(item,index) for index,item in list(enumerate(nltk.data.load('help\\tagsets\\upenn_tagset.pickle').keys()))])
     tagdict[''] = 36
 
-    p = len(tagdict.keys())
-    pos_tagged = pickle.load(open(path + "pos_tagged.pickle"))
+    # p = len(tagdict.keys())
+    # pos_tagged = pickle.load(open(path + "pos_tagged.pickle"))
 
     l = 5
     labels = pickle.load(open(path + "questions_trn_90.pickle"))
+    labdict = dict(list(enumerate(list(set(range(5))))))
+    # labels = list(enumerate(labels))
     # ner_tagged = ner_tag(questions)
 
     words = list(enumerate(['','']+list(set([item for sublist in [q.utterance.split() for q in questions] for item in sublist]))+['','']))
@@ -70,30 +72,64 @@ def construct_features(questions):
 
     for i in range(len(questions)):
         question = questions[i]
-        pos = [('',''),('','')] + pos_tagged[i] + [('',''),('','')]
+        lab = [4,4] + labels[i] + [4,4]
 
         # ner = ner_tagged[i]
         u = question.utterance.split()
+        #
+        # lab = [4,4] + labels[i]
 
-        lab = [4,4] + labels[i]
-
-        for j in range(2,len(pos)-2):
-            p_f = uni_bi_tri(p,tagdict,pos,j)
-            w_f = w*[0]
-            print u,pos
-            # print u[j-2]
-            w_f[worddict[u[j-2]]] = 1  # uni_bi_tri(w,worddict,words,word_index)
-
-            word_index += 1
-            # n_f = [0]
-
-            l_f = l*[0]
-            l_f[lab[j-1]] = 1
+        for j in range(2,len(lab)-2):
+            # p_f = uni_bi_tri(p,tagdict,pos,j)
+            # w_f = w*[0]
+            # w_f[worddict[u[j-2]]] = 1  # uni_bi_tri(w,worddict,words,word_index)
+            #
+            # # n_f = [0]
+            #
+            # l_f = l*[0]
+            # l_f[lab[j-1]] = 1
 
             l_fb = w*l*[0]
             l_fb[lab[j-1]*w+worddict[u[j-2]]] = 1
+            # features.append(p_f + w_f + l_fb + l_f)
+            features.append(uni_bi_tri(l,labdict,list(enumerate(lab)),j)+l_fb)
+            word_index += 1
+    return features
 
-            features.append(p_f + w_f + l_f + l_fb)
+def create_features(questions):
+    path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\"
+
+    pos_tagged = pickle.load(open(path + "pos_tagged.pickle"))
+
+    labels = pickle.load(open(path + "questions_trn_90.pickle"))
+
+    features = []
+    for i in range(len(questions)):
+        question = questions[i]
+        u = ["",""]+question.utterance.split()+["",""]
+        p = ['','']+[pp[1] for pp in pos_tagged[i]]+['','']
+        l = [4,4]+labels[i]+[4,4]
+        for j in range(2,len(u)-2):
+            feature = {}
+
+            feature["w_u_"+u[j]] = 1
+            feature["w_b_"+u[j-1]+"_"+u[j]] = 1
+            feature["w_b_"+u[j]+"_"+u[j+1]] = 1
+            feature["w_t_"+u[j-1]+"_"+u[j-1]+"_"+u[j]] = 1
+            feature["w_t_"+u[j-1]+"_"+u[j]+"_"+u[j+1]] = 1
+            feature["w_t_"+u[j]+"_"+u[j+1]+"_"+u[j+2]] = 1
+
+            feature["p_u_"+p[j]] = 1
+            feature["p_b_"+p[j-1]+"_"+p[j]] = 1
+            feature["p_b_"+p[j]+"_"+p[j+1]] = 1
+            feature["p_t_"+p[j-1]+"_"+p[j-1]+"_"+p[j]] = 1
+            feature["p_t_"+p[j-1]+"_"+p[j]+"_"+p[j+1]] = 1
+            feature["p_t_"+p[j]+"_"+p[j+1]+"_"+p[j+2]] = 1
+
+            feature["l_"+str(l[j-1])] = 1
+            feature["l_w_"+str(l[j-1])+"_"+u[j]] = 1
+
+            features.append(feature)
     return features
 
 def load_questions(fpath):
@@ -105,5 +141,5 @@ if __name__ == "__main__":
     parser.add_argument("start",help="start",type=int,default=0)
     args = parser.parse_args()
     questions = load_questions(args.fpath)
-    c = construct_features(questions[:90])
-    pickle.dump(c,open("phrase_detect_features.pickle","wb"))
+    c = create_features(questions[:90])
+    pickle.dump(c,open("phrase_detect_features_90_map.pickle","wb"))
