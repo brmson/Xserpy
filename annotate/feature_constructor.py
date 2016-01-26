@@ -1,6 +1,6 @@
 import os,argparse,json,pickle,nltk,time
 from nltk import StanfordNERTagger
-
+from phrase_detector import predict
 from annotator import object_decoder
 
 def uni_bi_tri(c,u,j):
@@ -53,12 +53,21 @@ def construct_feature(p,u,n,j,l):
     feature.append("l_w_"+str(l)+"_"+u[j])
     return feature
 
-def create_features(questions):
-    path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\"
+def label_phrases(questions,pos_tagged,ner_tagged,weights):
+    l = 4
+    features = []
+    for i in range(len(questions)):
+        question = questions[i]
+        u = ["",""]+question.utterance.split()+["",""]
+        p = ['','']+[pp[1] for pp in pos_tagged[i]]+['','']
+        n = ['','']+[nn[1] for nn in ner_tagged[i]]+['','']
+        for j in range(2,len(u)-2):
+            f = construct_feature(p,u,n,j,l)
+            l = predict(weights,f)
+            features.append(f)
+    return features
 
-    pos_tagged = pickle.load(open(path + "pos_tagged.pickle"))
-
-    ner_tagged = pickle.load(open(path + "ner_tagged.pickle"))
+def create_features(questions,pos_tagged,ner_tagged,path):
 
     labels = pickle.load(open(path + "questions_trn_90.pickle"))
 
@@ -82,5 +91,10 @@ if __name__ == "__main__":
     parser.add_argument("start",help="start",type=int,default=0)
     args = parser.parse_args()
     questions = load_questions(args.fpath)
-    c = create_features(questions[:90])
-    pickle.dump(c,open("phrase_detect_features_90_arr.pickle","wb"))
+    path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
+    pos_tagged = pickle.load(open(path + "data\\pos_tagged.pickle"))
+    ner_tagged = pickle.load(open(path + "data\\ner_tagged.pickle"))
+    weights = pickle.load(open(path+"models\\w_90_50.pickle"))
+    # c = create_features(questions[:90],pos_tagged,ner_tagged,path)
+    labelled = label_phrases(questions[90:180],pos_tagged,ner_tagged,weights)
+    pickle.dump(labelled,open("phrase_detect_features_90_arr.pickle","wb"))
