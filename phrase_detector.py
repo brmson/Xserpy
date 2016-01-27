@@ -1,10 +1,6 @@
 import argparse,pickle,random
 from collections import defaultdict
 
-def find_argmax(w,candidates):
-    L = [sum([a*b for a,b in zip(w,candidate)]) for candidate in candidates]
-    return candidates[L.index(max(L))]
-
 def predict(weights,features):
     classes = range(5)
     scores = defaultdict(float)
@@ -16,15 +12,17 @@ def predict(weights,features):
             scores[c] += weight
     return max(classes, key=lambda c: (scores[c], c))
 
-
-def train(n_iter, examples):
-    learning_rate = 0.1
-    weights = {}
+def init_weights(examples,weights):
     for e,t in examples:
         for f in e:
-            weights[f] = {}
-            for j in range(5):
-                weights[f][j] = 0
+            if f not in weights.keys():
+                weights[f] = {}
+                for j in range(5):
+                    weights[f][j] = 0
+    return weights
+
+def train(n_iter, examples,weights):
+    learning_rate = 0.1
     for i in range(n_iter):
         err = 0
         for features, true in examples:
@@ -34,8 +32,8 @@ def train(n_iter, examples):
                     weights[f][true] += learning_rate
                     weights[f][guess] -= learning_rate
                 err += 1.0
-        print err/len(examples)
         random.shuffle(examples)
+    print err/len(examples)
     return weights
 
 if __name__ == "__main__":
@@ -48,5 +46,6 @@ if __name__ == "__main__":
     labels = pickle.load(open(path+"data\\labels_trn_90.pickle"))
     # print len(words),len(labels)
     # n = len(words[0])
-    w = train(args.n_iter,zip(words,labels))
+    examples = zip(words,labels)
+    w = train(args.n_iter,examples,init_weights(examples,{}))
     pickle.dump(w,open("w_90_"+str(args.n_iter)+".pickle","wb"))
