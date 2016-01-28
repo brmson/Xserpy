@@ -1,24 +1,61 @@
 from annotate.annotator import Question,object_decoder,json
 import pickle
 
-class Phrase(object):
-    def __init__(self,variable,entity,relation,category):
-        self.variable = variable
-        self.entity = entity
-        self.relation = relation
-        self.category = category
+class Item(object):
+    def __init__(self,stack,queue,finished):
+        self.stack = stack
+        self.queue = queue
+        self.finished = finished
+
+def compute_score(item):
+    return 1
+
+def shift(item):
+    return
+
+def reduce_item(item):
+    return
+
+def arcleft(item):
+    return
+
+def arcright(item):
+    return
+
+def shift_reduce(sentence):
+    actions = [shift,reduce_item,arcleft,arcright]
+    deque = []
+    deque.append(Item([],sentence,False))
+    result = None
+    score = 0
+    while deque:
+        lst = []
+        for item in deque:
+            for action in actions:
+                new_item = action(item)
+                if new_item.finished:
+                    new_score = compute_score(new_item)
+                    if result == None or new_score > score:
+                        result = new_item
+                        score = new_score
+                else:
+                    lst.append(new_item)
+        deque = lst[:10]
+    return result
 
 def parse_to_phrases(questions,labels):
-    index = 0
     phrases = []
-    for q in questions:
-        u = q.utterance.split()
+    print len(questions),len(labels)
+    for i in range(len(questions)):
+        u = questions[i].utterance.split()
+        label = labels[i]
         dic = {}
         phrase = ["","","",""]
         order = [0,0,0,0]
         j = 0
-        for word in u:
-            l = labels[index]
+        for index in range(len(label)):
+            l = label[index]
+            word = u[index]
             index += 1
             if l == 4:
                 continue
@@ -34,6 +71,6 @@ if __name__ == "__main__":
 
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
     questions = json.load(open(path+"data\\free917.train.examples.canonicalized.json"),object_hook=object_decoder)
-    labels = pickle.load(open(path+"data\\labels_trn_90.pickle"))
-    phrases = parse_to_phrases(questions[:20],labels)
+    labels = pickle.load(open(path+"data\\questions_trn_90.pickle"))
+    phrases = parse_to_phrases(questions[:90],labels)
     print ""
