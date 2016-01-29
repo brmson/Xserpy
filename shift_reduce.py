@@ -2,19 +2,23 @@ from annotate.annotator import Question,object_decoder,json
 import pickle
 
 class Item(object):
-    def __init__(self,stack,queue,finished):
+    def __init__(self,stack,queue):
         self.stack = stack
         self.queue = queue
-        self.finished = finished
 
 def compute_score(item):
     return 1
 
 def shift(item):
-    return
+    q = item.queue[0]
+    s = item.stack
+    s.append(q)
+    return Item(s,item.queue[1:])
 
 def reduce_item(item):
-    return
+    s = item.stack
+    s.pop()
+    return Item(s,item.queue)
 
 def arcleft(item):
     return
@@ -33,7 +37,7 @@ def shift_reduce(sentence):
         for item in deque:
             for action in actions:
                 new_item = action(item)
-                if new_item.finished:
+                if not new_item.queue:
                     new_score = compute_score(new_item)
                     if result == None or new_score > score:
                         result = new_item

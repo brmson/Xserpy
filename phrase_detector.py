@@ -1,8 +1,8 @@
 import argparse,pickle,random
 from collections import defaultdict
 
-def predict(weights,features):
-    classes = range(5)
+def predict(weights,features,cl):
+    classes = range(cl)
     scores = defaultdict(float)
     for feat in features:
         if feat not in weights:
@@ -12,21 +12,21 @@ def predict(weights,features):
             scores[c] += weight
     return max(classes, key=lambda c: (scores[c], c))
 
-def init_weights(examples,weights):
+def init_weights(examples,weights,cl):
     for e,t in examples:
         for f in e:
             if f not in weights.keys():
                 weights[f] = {}
-                for j in range(5):
+                for j in range(cl):
                     weights[f][j] = 0
     return weights
 
-def train(n_iter, examples,weights):
+def train(n_iter, examples,weights,cl):
     learning_rate = 0.1
     for i in range(n_iter):
         err = 0
         for features, true in examples:
-            guess = predict(weights,features)
+            guess = predict(weights,features,cl)
             if guess != true:
                 for f in features:
                     weights[f][true] += learning_rate
@@ -47,5 +47,5 @@ if __name__ == "__main__":
     # print len(words),len(labels)
     # n = len(words[0])
     examples = zip(words,labels)
-    w = train(args.n_iter,examples,init_weights(examples,{}))
+    w = train(args.n_iter,examples,init_weights(examples,{},5),5)
     pickle.dump(w,open("w_90_"+str(args.n_iter)+".pickle","wb"))

@@ -70,7 +70,7 @@ def label_phrases(questions,pos_tagged,ner_tagged,weights):
         n = ['','']+[nn[1] for nn in ner_tagged[i]]+['','']
         for j in range(2,len(u)-2):
             f = construct_feature(p,u,n,j,l)
-            l = predict(weights,f)
+            l = predict(weights,f,5)
             features.append(f)
             labels.append(l)
     return (features,labels)
