@@ -89,5 +89,6 @@ if __name__ == "__main__":
     questions = json.load(open(args.fpath),object_hook=object_decoder)
     # annotate_questions_label(questions)
     # bootstrap(questions,words,labels,5,50,89)
-    phrases = parse_to_phrases(questions[:90],labels)
-    annotate_questions_dag(phrases)
+    phrases = parse_to_phrases(questions[:20],labels)
+    dags = annotate_questions_dag(phrases)
+    pickle.dump(dags,open("dags_20.pickle","wb"))
