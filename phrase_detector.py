@@ -7,9 +7,9 @@ def predict(weights,features,cl):
     for feat in features:
         if feat not in weights:
             continue
-        weights = weights[feat]
-        for c, weight in weights.items():
-            scores[c] += weight
+        weight = weights[feat]
+        for c, w in weight.items():
+            scores[c] += w
     return max(classes, key=lambda c: (scores[c], c))
 
 def init_weights(examples,weights,cl):
@@ -48,4 +48,4 @@ if __name__ == "__main__":
     # n = len(words[0])
     examples = zip(words,labels)
     w = train(args.n_iter,examples,init_weights(examples,{},5),5)
-    pickle.dump(w,open("w_90_"+str(args.n_iter)+".pickle","wb"))
+    # pickle.dump(w,open("w_90_"+str(args.n_iter)+".pickle","wb"))
