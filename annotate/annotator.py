@@ -84,11 +84,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    # words = pickle.load(open(path+"annotate\\phrase_detect_features_90_arr.pickle"))
-    labels = pickle.load(open(path+"data\\questions_trn_90.pickle"))
+    words = pickle.load(open(path+"annotate\\phrase_detect_features_90_arr.pickle"))
+    labels = pickle.load(open(path+"data\\labels_trn_90.pickle"))
     questions = json.load(open(args.fpath),object_hook=object_decoder)
     # annotate_questions_label(questions)
-    # bootstrap(questions,words,labels,5,50,89)
-    phrases = parse_to_phrases(questions[:20],labels)
-    dags = annotate_questions_dag(phrases)
-    pickle.dump(dags,open("dags_20.pickle","wb"))
+    bootstrap(questions,words,labels,50,10,89)
+    # phrases = parse_to_phrases(questions[:20],labels)
+    # dags = annotate_questions_dag(phrases)
+    # pickle.dump(dags,open("dags_20.pickle","wb"))

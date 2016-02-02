@@ -66,7 +66,7 @@ def arcright(item):
         d[item.queue[0]] += [item.stack[-1]]
     return Item(item.stack,q,d,item.sequence+[3],item.features,item.data)
 
-def shift_reduce(sentence):
+def shift_reduce(sentence,weights):
     actions = [shift,reduce_item,arcleft,arcright]
     deque = []
     deque.append(Item([],sentence,False))
@@ -75,15 +75,14 @@ def shift_reduce(sentence):
     while deque:
         lst = []
         for item in deque:
-            for action in actions:
-                new_item = action(item)
-                if not new_item.queue:
-                    new_score = compute_score(new_item)
-                    if result == None or new_score > score:
-                        result = new_item
-                        score = new_score
-                else:
-                    lst.append(new_item)
+            new_item = actions[predict(weights,item.features[-1],4)](item)
+            if not new_item.queue:
+                new_score = compute_score(new_item)
+                if result == None or new_score > score:
+                    result = new_item
+                    score = new_score
+            else:
+                lst.append(new_item)
         deque = lst[:10]
     return result
 
