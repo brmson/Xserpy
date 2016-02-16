@@ -183,9 +183,10 @@ if __name__ == "__main__":
     labels = pickle.load(open(path+"data\\questions_trn_90.pickle"))
     dags = pickle.load(open(path+"annotate\\dags_20.pickle"))
     pos_tagged = pickle.load(open(path + "data\\pos_tagged.pickle"))
-    phrases,pos = parse_to_phrases(questions[:3],labels[:3],pos_tagged[:3])
+    i = 10
+    phrases,pos = parse_to_phrases(questions[:i],labels[:i],pos_tagged[:i])
     start = time.time()
-    examples = derive_labels(dags[:3],phrases,pos)
+    examples = derive_labels(dags[:i],phrases,pos)
     c = 4
     # weights = train(5,examples,init_weights(examples,{},c),c)
     print time.time()-start

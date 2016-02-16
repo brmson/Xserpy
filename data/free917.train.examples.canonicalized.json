@@ -301,7 +301,7 @@
   {"utterance": "how many comic stories has Adrienne Roy colored", "targetFormula": "(count (!fb:comic_books.comic_book_colorist.comic_stories_colored fb:en.adrienne_roy))"},
   {"utterance": "what games has Garry Kasparov won", "targetFormula": "(!fb:chess.chess_game_participation.game ((lambda x (fb:chess.chess_game_participation.outcome (var x))) fb:m.0454vkd))"},
   {"utterance": "how tall do you have to be to ride the american eagle", "targetFormula": "(!fb:amusement_parks.ride.height_restriction fb:m.0cdlng)"},
-  {"utterance": "\ufeffwho is the head coach of the Pittsburgh Steelers", "targetFormula": "(!fb:american_football.football_team.current_head_coach fb:en.pittsburgh_steelers)"},
+  {"utterance": "who is the head coach of the Pittsburgh Steelers", "targetFormula": "(!fb:american_football.football_team.current_head_coach fb:en.pittsburgh_steelers)"},
   {"utterance": "what conditions does aspirin treat", "targetFormula": "(!fb:medicine.medical_treatment.used_to_treat fb:en.aspirin)"},
   {"utterance": "for what team does Fedor Tyutin play", "targetFormula": "(!fb:ice_hockey.hockey_roster_position.team ((lambda x (fb:ice_hockey.hockey_roster_position.player (var x))) fb:en.fedor_tyutin))"},
   {"utterance": "how many tv shows was Ron Glass in", "targetFormula": "(count (!fb:tv.regular_tv_appearance.series ((lambda x (fb:tv.regular_tv_appearance.actor (var x))) fb:en.ron_glass)))"},

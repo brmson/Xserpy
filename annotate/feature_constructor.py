@@ -65,6 +65,7 @@ def label_phrases(questions,pos_tagged,ner_tagged,weights):
     for i in range(len(questions)):
         l = 4
         question = questions[i]
+        # print question.utterance
         u = ["",""]+question.utterance.split()+["",""]
         p = ['','']+[pp[1] for pp in pos_tagged[i]]+['','']
         n = ['','']+[nn[1] for nn in ner_tagged[i]]+['','']
@@ -73,11 +74,13 @@ def label_phrases(questions,pos_tagged,ner_tagged,weights):
             l = predict(weights,f,5)
             features.append(f)
             labels.append(l)
+            # print u[j],l,
+        # print '\n'
     return (features,labels)
 
 def create_features(questions,pos_tagged,ner_tagged,path):
 
-    labels = pickle.load(open(path + "questions_trn_90.pickle"))
+    labels = pickle.load(open(path))
 
     features = []
     for i in range(len(questions)):
@@ -102,7 +105,8 @@ if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
     pos_tagged = pickle.load(open(path + "data\\pos_tagged.pickle"))
     ner_tagged = pickle.load(open(path + "data\\ner_tagged.pickle"))
-    weights = pickle.load(open(path+"models\\w_90_50.pickle"))
-    # c = create_features(questions[:90],pos_tagged,ner_tagged,path)
+    size = 40
+    # weights = pickle.load(open(path+"models\\w_90_50.pickle"))
+    c = create_features(questions[:size],pos_tagged,ner_tagged,path+"data\\questions_trn_"+str(size)+".pickle")
     # labelled = label_phrases(questions[90:180],pos_tagged,ner_tagged,weights)
-    # pickle.dump(labelled,open("phrase_detect_features_90_arr.pickle","wb"))
+    pickle.dump(c,open("phrase_detect_features_40_arr.pickle","wb"))
