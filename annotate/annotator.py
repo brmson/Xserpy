@@ -33,7 +33,10 @@ def annotate_questions_label(questions,start):
         L = []
         l = q.utterance.split()
         for word in l:
-            label = dic[raw_input(word+" ")]
+            inp = raw_input(word+" ")
+            while inp not in dic.keys():
+                inp = raw_input("oprava: ")
+            label = dic[inp]
             L.append(label)
         # print M
         labeled.append(L)
@@ -160,11 +163,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    words = pickle.load(open(path+"annotate\\phrase_detect_features_40_arr.pickle"))
-    labels = pickle.load(open(path+"data\\questions_trn_40.pickle"))
+    # words = pickle.load(open(path+"annotate\\phrase_detect_features_100_arr.pickle"))
+    labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))
     questions = json.load(open(args.fpath),object_hook=object_decoder)
-    # annotate_questions_label(questions,80)
+    annotate_questions_label(questions,120)
     # bootstrap(questions,words,labels,10,100,40)
-    phrases = parse_phrases(questions[:20],labels)
-    dags = parse_dags(phrases)
-    pickle.dump(dags,open("dags_20.pickle","wb"))
+    # phrases = parse_phrases(questions[:100],labels)
+    # dags = parse_dags(phrases)
+    # pickle.dump(dags,open("dags_100.pickle","wb"))
