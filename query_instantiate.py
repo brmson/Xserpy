@@ -1,5 +1,6 @@
 import json,pickle
 from annotate.annotator import object_decoder,parse_phrases,parse_dags
+from phrase_detector import train,predict
 class Instance:
     def __init__(self,sentence,candidates,dependencies,label,dependency_label):
         self.sentence = sentence
@@ -8,8 +9,18 @@ class Instance:
         self.sentence_label = label
         self.dependency_label = dependency_label
 
+def score(buff,weights,cl):
+    result = []
+    for b in buff:
+        index = predict(weights,b,cl,score=False)
+        sc = predict(weights,b,cl,score=True)
+        result.append(sc[index])
+    res = zip(buff,result)
+    res.sort(key=lambda x: x[1], reverse=True)
+    result = [r[0] for r in res]
+    return result
 
-def beam_search(instance,size,phrase_labels,dependency_labels):
+def beam_search(instance,size,phrase_labels,dependency_labels,weights):
     beam = [[]]
     for i in range(len(instance.sentence)):
         buff = []
@@ -17,7 +28,8 @@ def beam_search(instance,size,phrase_labels,dependency_labels):
         for z in beam:
             for p in phrase_labels:
                 buff.append(z + p)
-        beam = buff[:size]
+
+        beam = score(buff,weights,len(phrase_labels))[:size]
 
         label = instance.sentence_label[:i]
         if label not in beam:
@@ -31,7 +43,7 @@ def beam_search(instance,size,phrase_labels,dependency_labels):
                     for d in dependency_labels:
                         buff.append(z + d)
 
-            beam = buff[:size]
+            beam = score(buff,weights,len(dependency_labels))[:size]
             label = instance.dependency_label[c][:i]
             if label not in beam:
                 return beam[0]
