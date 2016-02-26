@@ -68,6 +68,19 @@ def get_entities_relations(entities):
             relations.append(a)
     return list(set(relations)),list(set(entities))
 
+def get_surface_names(entities):
+    result = {}
+    for e in entities:
+        surf = ""
+        s = e.split('.')
+        w = s[1].split('_')
+        for W in w:
+            if W == 'the':
+                continue
+            surf += W + " "
+        result[e] = surf[:-1]
+    pickle.dump(result,open("entities_100.pickle","w"))
+
 def gold_standard(phrases,dags,entities):
     result = []
     for i in range(len(entities)):
@@ -111,5 +124,5 @@ if __name__ == "__main__":
     # dags = parse_dags(phrases)
     rel_entities = get_db_entities(questions)
     relations,entities = get_entities_relations(rel_entities)
-    print ''
+    get_surface_names(entities)
     # gold_standard(phrases,dags,entities)
