@@ -57,6 +57,17 @@ def get_db_entities(questions):
         result.append(strings)
     return result
 
+def get_entities_relations(entities):
+    all = [item for sublist in entities for item in sublist]
+    entities = []
+    relations = []
+    for a in all:
+        if a[:3] == 'en.':
+            entities.append(a)
+        else:
+            relations.append(a)
+    return list(set(relations)),list(set(entities))
+
 def gold_standard(phrases,dags,entities):
     result = []
     for i in range(len(entities)):
@@ -95,8 +106,10 @@ if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\free917.train.examples.canonicalized.json"
     questions = json.load(open(path),object_hook=object_decoder)[:100]
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))
-    phrases = parse_phrases(questions,labels)
-    dags = parse_dags(phrases)
-    entities = get_db_entities(questions)
-    gold_standard(phrases,dags,entities)
+    # labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))
+    # phrases = parse_phrases(questions,labels)
+    # dags = parse_dags(phrases)
+    rel_entities = get_db_entities(questions)
+    relations,entities = get_entities_relations(rel_entities)
+    print ''
+    # gold_standard(phrases,dags,entities)
