@@ -34,9 +34,6 @@ class Item(object):
 
         return features
 
-def compute_score(item):
-    return 1
-
 def shift(item):
     q = item.queue[0]
     s = item.stack[:]
@@ -66,24 +63,29 @@ def arcright(item):
         d[item.queue[0]] += [item.stack[-1]]
     return Item(item.stack,q,d,item.sequence+[3],item.features,item.data)
 
-def shift_reduce(sentence,weights):
+def shift_reduce(sentence,weights,size):
     actions = [shift,reduce_item,arcleft,arcright]
     deque = []
-    deque.append(Item([],sentence,False))
+    start_item = Item([],sentence,False)
+    start_item.score = 0
+    deque.append(start_item)
     result = None
     score = 0
     while deque:
         lst = []
         for item in deque:
-            new_item = actions[predict(weights,item.features[-1],4)](item)
-            if not new_item.queue:
-                new_score = compute_score(new_item)
-                if result == None or new_score > score:
-                    result = new_item
-                    score = new_score
-            else:
-                lst.append(new_item)
-        deque = lst[:10]
+            for i in range(len(actions)):
+                new_score = item.score + predict(weights,item.features[-1],4,score=True)[i]
+                new_item = actions[i](item)
+                new_item.score = new_score
+                if not new_item.queue:
+                    if result is None or new_score > score:
+                        result = new_item
+                        score = new_score
+                else:
+                    lst.append(new_item)
+        lst.sort(key=lambda x: x.score, reverse=True)
+        deque = lst[:size]
     return result
 
 def check_dag(gold,dag):
@@ -173,15 +175,16 @@ def derive_labels(dags,phrases,pos):
                     queue_item.append(red_item)
                     # queue_item = [left_item,right_item,red_item]
                     queue = queue_item + queue
-        sequences += sequence
-        features += feature[:-1]
+        if sequence is not None:
+            sequences += sequence
+            features += feature[:-1]
     return zip(features,sequences)
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
     questions = json.load(open(path+"data\\free917.train.examples.canonicalized.json"),object_hook=object_decoder)
-    labels = pickle.load(open(path+"data\\questions_trn_90.pickle"))
-    dags = pickle.load(open(path+"annotate\\dags_20.pickle"))
+    labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))
+    dags = pickle.load(open(path+"annotate\\dags_100.pickle"))
     pos_tagged = pickle.load(open(path + "data\\pos_tagged.pickle"))
     i = 10
     phrases,pos = parse_to_phrases(questions[:i],labels[:i],pos_tagged[:i])
