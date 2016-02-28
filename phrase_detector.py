@@ -1,6 +1,14 @@
 import argparse,pickle,random
 from collections import defaultdict
 
+def compute_score(features,weights,index):
+    score = 0
+    for feat in features:
+        if feat not in weights:
+            continue
+        score += weights[feat][index]
+    return score
+
 def predict(weights,features,cl):
     classes = range(cl)
     scores = defaultdict(float)
