@@ -180,14 +180,16 @@ def derive_labels(dags,phrases,pos):
                     right_item = arcright(item)
                     red_item = reduce_item(item)
 
-                    if check_dag(dag,left_item.dag):
-                        queue_item.append(left_item)
-
-                    if check_dag(dag,right_item.dag):
-                        queue_item.append(right_item)
+                    if left_item is not None:
+                        if check_dag(dag,left_item.dag):
+                            queue_item.append(left_item)
+                    if right_item is not None:
+                        if check_dag(dag,right_item.dag):
+                            queue_item.append(right_item)
 
                     # if check_dag(dag,red_item.dag):
-                    queue_item.append(red_item)
+                    if red_item is not None:
+                        queue_item.append(red_item)
                     # queue_item = [left_item,right_item,red_item]
                     queue = queue_item + queue
         if sequence is not None:
