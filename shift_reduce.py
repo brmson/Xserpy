@@ -1,5 +1,5 @@
 from annotate.annotator import Question,object_decoder,json
-from phrase_detector import train,predict,init_weights
+from phrase_detector import train,predict,init_weights,compute_score
 import pickle,time
 
 class Item(object):
@@ -18,12 +18,12 @@ class Item(object):
             head = stack[-1]
             features.append(pos[head][:-1])
             features.append("ST_w_"+phrase[head][0])
-            features.append("ST_p_w_"+pos[head]+"_"+phrase[head][0])
+            features.append("ST_p_w_"+pos[head]+phrase[head][0])
         if queue:
             next = queue[0]
             features.append(pos[next][:-1])
             features.append("N0_w_"+phrase[next][0])
-            features.append("N0_p_w_"+pos[next]+"_"+phrase[next][0])
+            features.append("N0_p_w_"+pos[next]+phrase[next][0])
             features.append("N0_t_"+str(phrase[next][1]))
             features.append("N0_t_p_"+str(phrase[next][1])+"_"+pos[next])
             features.append("N0_t_w_"+str(phrase[next][1])+"_"+phrase[next][0])
@@ -42,14 +42,18 @@ def shift(item):
 
 def reduce_item(item):
     s = item.stack[:]
+    if not s:
+        return None
     s.pop()
     return Item(s,item.queue,item.dag,item.sequence+[1],item.features,item.data)
 
 def arcleft(item):
     d = [d[:] for d in item.dag]
     q = item.queue[:]
-    if item.queue[0] in d[item.stack[-1]]:
-        q = []
+    if not item.stack:
+        return None
+    elif item.queue[0] in d[item.stack[-1]]:
+        return None
     else:
         d[item.stack[-1]] += [item.queue[0]]
     return Item(item.stack,q,d,item.sequence+[2],item.features,item.data)
@@ -57,16 +61,25 @@ def arcleft(item):
 def arcright(item):
     d = [dd[:] for dd in item.dag]
     q = item.queue[:]
-    if item.stack[-1] in d[item.queue[0]]:
-        q = []
+    if not item.stack:
+        return None
+    elif item.stack[-1] in d[item.queue[0]]:
+        return None
     else:
         d[item.queue[0]] += [item.stack[-1]]
     return Item(item.stack,q,d,item.sequence+[3],item.features,item.data)
 
-def shift_reduce(sentence,weights,size):
+def shift_reduce(sentence,pos,weights,size):
     actions = [shift,reduce_item,arcleft,arcright]
     deque = []
-    start_item = Item([],sentence,False)
+    start_item = type('TestItem', (), {})() # Item([],sentence,False,[],[],[])
+    start_item.queue = range(len(sentence))
+    start_item.stack = []
+    start_item.dag = [[] for sen in range(len(sentence))]
+    start_item.features = []
+    start_item.sequence = []
+    start_item.data = [sentence,pos]
+    start_item = shift(start_item)
     start_item.score = 0
     deque.append(start_item)
     result = None
@@ -75,8 +88,10 @@ def shift_reduce(sentence,weights,size):
         lst = []
         for item in deque:
             for i in range(len(actions)):
-                new_score = item.score + predict(weights,item.features[-1],4,score=True)[i]
                 new_item = actions[i](item)
+                if new_item is None:
+                    continue
+                new_score = item.score + compute_score(new_item.features[-1],weights,i)
                 new_item.score = new_score
                 if not new_item.queue:
                     if result is None or new_score > score:
@@ -180,6 +195,14 @@ def derive_labels(dags,phrases,pos):
             features += feature[:-1]
     return zip(features,sequences)
 
+def batch_shift_reduce(sentences,pos,weights,size):
+    result = []
+    for s in range(len(sentences)):
+        sentence = sentences[s]
+        p = pos[s]
+        result.append(shift_reduce(sentence,p,weights,size))
+    return result
+
 if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
     questions = json.load(open(path+"data\\free917.train.examples.canonicalized.json"),object_hook=object_decoder)
@@ -191,5 +214,7 @@ if __name__ == "__main__":
     start = time.time()
     examples = derive_labels(dags[:i],phrases,pos)
     c = 4
-    # weights = train(5,examples,init_weights(examples,{},c),c)
+    size = 20
+    weights = train(50,examples,init_weights(examples,{},c),c)
+    dags = batch_shift_reduce(phrases,pos,weights,size)
     print time.time()-start
