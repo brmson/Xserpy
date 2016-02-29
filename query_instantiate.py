@@ -1,6 +1,7 @@
 import json,pickle
 from annotate.annotator import object_decoder,parse_phrases,parse_dags
-from phrase_detector import train,predict
+from phrase_detector import train,compute_score
+
 class Instance:
     def __init__(self,sentence,candidates,dependencies,label,dependency_label):
         self.sentence = sentence
@@ -12,9 +13,8 @@ class Instance:
 def score(buff,weights,cl):
     result = []
     for b in buff:
-        index = predict(weights,b,cl,score=False)
-        sc = predict(weights,b,cl,score=True)
-        result.append(sc[index])
+        sc = compute_score(b,weights,0)
+        result.append(sc)
     res = zip(buff,result)
     res.sort(key=lambda x: x[1], reverse=True)
     result = [r[0] for r in res]
@@ -51,22 +51,41 @@ def beam_search(instance,size,phrase_labels,dependency_labels,weights):
     return beam[0]
 
 def get_db_entities(questions):
+    types = []
     result = []
     for q in questions:
+        letter = [0,0]
+        j = 0
         i = 0
         strings = []
         tF = q.targetFormula
+        temp = ""
         while i < len(tF):
             if tF[i] == 'f':
-                str = ""
+                strin = ""
                 i += 3
                 while tF[i] != ')' and tF[i] != ' ':
-                    str += tF[i]
+                    strin += tF[i]
                     i += 1
-                strings.append(str)
+                strings.append(strin)
+                if strin[:2] == 'en':
+                    temp += 'E'
+                    j = 0
+                else:
+                    temp += 'C'
+                    j = 1
+                temp += str(letter[j])
+                letter[j] += 1
             else:
+                if tF[i:i+3] == 'dat':
+                    temp += 'D'
+                    while tF[i] != ')':
+                        i += 1
+                temp += tF[i]
                 i += 1
+        types.append(temp)
         result.append(strings)
+    types = list(set(types))
     return result
 
 def get_entities_relations(entities):
@@ -91,7 +110,8 @@ def get_surface_names(entities):
                 continue
             surf += W + " "
         result[e] = surf[:-1]
-    pickle.dump(result,open("entities_100.pickle","w"))
+    # pickle.dump(result,open("entities_100.pickle","w"))
+    return result
 
 def gold_standard(phrases,dags,entities):
     result = []
@@ -127,14 +147,42 @@ def gold_standard(phrases,dags,entities):
         print res
         # result.append(res)
     return result
+
+def create_features(questions,phrases):
+    phr = list(set([p[0].lower().strip() for sublist in phrases for p in sublist]))
+    rel_entities = get_db_entities(questions)
+    relations,entities = get_entities_relations(rel_entities)
+    surf_names = get_surface_names(entities)
+    e_features = []
+    for entity in entities:
+        feature = []
+        name = entity.split('.')[-1]
+        for ph in phr:
+            s = surf_names[entity]
+            if ph == s:
+                feature.append("eq_"+name+"_"+ph)
+            elif s.startswith(ph):
+                feature.append("pre_"+name+"_"+ph)
+            elif s.endswith(ph):
+                feature.append("suf_"+name+"_"+ph)
+            elif ph in s:
+                feature.append("in_"+name+"_"+ph)
+            overlap = len(s) - len(s.replace(ph,''))
+            if overlap > 0:
+                feature.append("over_"+name+"_"+ph+"_"+str(overlap))
+        e_features.append(feature)
+    return e_features
+
 if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\free917.train.examples.canonicalized.json"
     questions = json.load(open(path),object_hook=object_decoder)[:100]
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    # labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))
-    # phrases = parse_phrases(questions,labels)
+    labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))
+    phrases = parse_phrases(questions,labels)
     # dags = parse_dags(phrases)
+    features = create_features(questions,phrases)
     rel_entities = get_db_entities(questions)
     relations,entities = get_entities_relations(rel_entities)
-    get_surface_names(entities)
+    surf_names = get_surface_names(entities)
     # gold_standard(phrases,dags,entities)
+    print ''
