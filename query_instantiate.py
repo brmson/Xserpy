@@ -1,4 +1,4 @@
-import json,pickle
+import json,pickle,random
 from annotate.annotator import object_decoder,parse_phrases,parse_dags
 from phrase_detector import train,compute_score
 
@@ -49,6 +49,21 @@ def beam_search(instance,size,phrase_labels,dependency_labels,weights):
                 return beam[0]
 
     return beam[0]
+
+def train_with_beam(n_iter,examples,weights,size,phrase_labels,dependency_labels):
+    learning_rate = 1
+    for i in range(n_iter):
+        err = 0
+        for features, true in examples:
+            guess = beam_search(features,size,phrase_labels,dependency_labels,weights)
+            if guess != true:
+                for f in features:
+                    weights[f][true] += learning_rate
+                    weights[f][guess] -= learning_rate
+                err += 1.0
+        random.shuffle(examples)
+    print err/len(examples)
+    return weights
 
 def get_db_entities(questions):
     types = []
@@ -175,14 +190,14 @@ def create_features(questions,phrases):
 
 if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\free917.train.examples.canonicalized.json"
-    questions = json.load(open(path),object_hook=object_decoder)[:100]
+    questions = json.load(open(path),object_hook=object_decoder)[:10]
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
     labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))
     phrases = parse_phrases(questions,labels)
-    # dags = parse_dags(phrases)
-    features = create_features(questions,phrases)
+    dags = parse_dags(phrases)
+    # features = create_features(questions,phrases)
     rel_entities = get_db_entities(questions)
     relations,entities = get_entities_relations(rel_entities)
-    surf_names = get_surface_names(entities)
-    # gold_standard(phrases,dags,entities)
-    print ''
+    # surf_names = get_surface_names(entities)
+    gold = gold_standard(phrases,dags,rel_entities)
+    pickle.dump(gold,open('query_gold_10.pickle','wb'))
