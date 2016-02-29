@@ -3,12 +3,11 @@ from annotate.annotator import object_decoder,parse_phrases,parse_dags
 from phrase_detector import train,compute_score
 
 class Instance:
-    def __init__(self,sentence,candidates,dependencies,label,dependency_label):
+    def __init__(self,sentence,candidates,dependencies,label):
         self.sentence = sentence
         self.candidates = candidates
         self.dependencies = dependencies
-        self.sentence_label = label
-        self.dependency_label = dependency_label
+        self.label = label
 
 def score(buff,weights,cl):
     result = []
@@ -30,8 +29,8 @@ def beam_search(instance,size,phrase_labels,dependency_labels,weights):
                 buff.append(z + p)
 
         beam = score(buff,weights,len(phrase_labels))[:size]
-
-        label = instance.sentence_label[:i]
+        index = i*(len(instance.sentence)+1)
+        label = instance.sentence_label[index]
         if label not in beam:
             return beam[0]
 
@@ -39,12 +38,12 @@ def beam_search(instance,size,phrase_labels,dependency_labels,weights):
             buff = []
             for z in beam:
                 buff.append(z + dependency_labels[0])
-                if (i,c) in instance.dependencies.keys():
+                if c in instance.dependencies[index]:
                     for d in dependency_labels:
                         buff.append(z + d)
 
             beam = score(buff,weights,len(dependency_labels))[:size]
-            label = instance.dependency_label[c][:i]
+            label = instance.label[index+1:index+len(instance.sentence)+1]
             if label not in beam:
                 return beam[0]
 
@@ -168,25 +167,38 @@ def create_features(questions,phrases):
     rel_entities = get_db_entities(questions)
     relations,entities = get_entities_relations(rel_entities)
     surf_names = get_surface_names(entities)
-    e_features = []
+    e_features = {}
     for entity in entities:
-        feature = []
-        name = entity.split('.')[-1]
-        for ph in phr:
-            s = surf_names[entity]
-            if ph == s:
-                feature.append("eq_"+name+"_"+ph)
-            elif s.startswith(ph):
-                feature.append("pre_"+name+"_"+ph)
-            elif s.endswith(ph):
-                feature.append("suf_"+name+"_"+ph)
-            elif ph in s:
-                feature.append("in_"+name+"_"+ph)
-            overlap = len(s) - len(s.replace(ph,''))
-            if overlap > 0:
-                feature.append("over_"+name+"_"+ph+"_"+str(overlap))
-        e_features.append(feature)
+        feature = construct_feature(phr,entity,surf_names)
+        # e_features.append(feature)
+        e_features[entity] = feature
     return e_features
+
+def construct_feature(phr,entity,surf_names):
+    feature = []
+    name = entity.split('.')[-1]
+    for ph in phr:
+        s = surf_names[entity]
+        if ph == s:
+            feature.append("eq_"+name+"_"+ph)
+        elif s.startswith(ph):
+            feature.append("pre_"+name+"_"+ph)
+        elif s.endswith(ph):
+            feature.append("suf_"+name+"_"+ph)
+        elif ph in s:
+            feature.append("in_"+name+"_"+ph)
+        overlap = len(s) - len(s.replace(ph,''))
+        if overlap > 0:
+            feature.append("over_"+name+"_"+ph+"_"+str(overlap))
+    return feature
+
+def create_examples(questions,phrases,dags):
+    gold = pickle.load(open('query_gold_10.pickle'))
+    e_features = create_features(questions,phrases)
+    instances = []
+    for i in range(10):
+        instances.append(Instance(phrases[i],e_features,dags[i],gold[i]))
+    return instances
 
 if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\free917.train.examples.canonicalized.json"
