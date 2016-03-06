@@ -26,81 +26,91 @@ def beam_search(instance,size,phrase_labels,dependency_labels,weights):
 
         for z in beam:
             for p in phrase_labels:
-                buff.append(z + p)
-
+                buff.append(z + [p])
+        random.shuffle(buff)
         beam = score(buff,weights,len(phrase_labels))[:size]
         index = i*(len(instance.sentence)+1)
-        label = instance.sentence_label[index]
-        if label not in beam:
+        label = instance.label[index]
+        if label not in [b[-1] for b in beam]:
             return beam[0]
 
-        for c in range(len(instance.candidates)):
+        for c in range(len(instance.sentence)):
             buff = []
             for z in beam:
-                buff.append(z + dependency_labels[0])
-                if c in instance.dependencies[index]:
+                buff.append(z + [dependency_labels[0]])
+                if c in instance.dependencies[i]:
                     for d in dependency_labels:
-                        buff.append(z + d)
-
+                        buff.append(z + [d])
+                # else:
+                #     buff.append(z + ['x'])
+            random.shuffle(buff)
             beam = score(buff,weights,len(dependency_labels))[:size]
-            label = instance.label[index+1:index+len(instance.sentence)+1]
+            label = instance.label[index+1:index+c+3]
             if label not in beam:
                 return beam[0]
 
     return beam[0]
 
-def train_with_beam(n_iter,examples,weights,size,phrase_labels,dependency_labels):
+def train_with_beam(n_iter,examples,weights,size,phrase_labels,dependency_labels,features):
     learning_rate = 1
     for i in range(n_iter):
         err = 0
-        for features, true in examples:
-            guess = beam_search(features,size,phrase_labels,dependency_labels,weights)
+        for instance in examples:
+            true = instance.label
+            guess = beam_search(instance,size,['x']+phrase_labels,['x']+dependency_labels,weights)
+
             if guess != true:
-                for f in features:
-                    weights[f][true] += learning_rate
-                    weights[f][guess] -= learning_rate
+                for j in range(len(guess)):
+                    if guess[j] != true[j]:
+                        for f in features[guess[j]]:
+                            weights[f][true[j]] += learning_rate
+                            weights[f][guess[j]] -= learning_rate
                 err += 1.0
+
         random.shuffle(examples)
     print err/len(examples)
     return weights
 
+def get_entity(tF):
+    letter = [0,0]
+    j = 0
+    i = 0
+    strings = []
+    temp = ""
+    while i < len(tF):
+        if tF[i] == 'f':
+            strin = ""
+            i += 3
+            while tF[i] != ')' and tF[i] != ' ':
+                strin += tF[i]
+                i += 1
+            strings.append(strin)
+            if strin[:2] == 'en':
+                temp += 'E'
+                j = 0
+            else:
+                temp += 'C'
+                j = 1
+            temp += str(letter[j])
+            letter[j] += 1
+        else:
+            if tF[i:i+3] == 'dat':
+                temp += 'D'
+                while tF[i] != ')':
+                    i += 1
+            temp += tF[i]
+            i += 1
+    return strings,temp
+
 def get_db_entities(questions):
-    types = []
+    simple = []
     result = []
     for q in questions:
-        letter = [0,0]
-        j = 0
-        i = 0
-        strings = []
-        tF = q.targetFormula
-        temp = ""
-        while i < len(tF):
-            if tF[i] == 'f':
-                strin = ""
-                i += 3
-                while tF[i] != ')' and tF[i] != ' ':
-                    strin += tF[i]
-                    i += 1
-                strings.append(strin)
-                if strin[:2] == 'en':
-                    temp += 'E'
-                    j = 0
-                else:
-                    temp += 'C'
-                    j = 1
-                temp += str(letter[j])
-                letter[j] += 1
-            else:
-                if tF[i:i+3] == 'dat':
-                    temp += 'D'
-                    while tF[i] != ')':
-                        i += 1
-                temp += tF[i]
-                i += 1
-        types.append(temp)
+        strings, temp = get_entity(q.targetFormula)
         result.append(strings)
-    types = list(set(types))
-    return result
+        if len(temp) == 8:
+            simple.append(q)
+    return (result,simple)
 
 def get_entities_relations(entities):
     all = [item for sublist in entities for item in sublist]
@@ -158,21 +168,26 @@ def gold_standard(phrases,dags,entities):
                      else:
                          res.append(entity[int(inp)])
             k += len(dag)+1
-        print res
-        # result.append(res)
+        # print res
+        result.append(res)
     return result
 
 def create_features(questions,phrases):
     phr = list(set([p[0].lower().strip() for sublist in phrases for p in sublist]))
-    rel_entities = get_db_entities(questions)
+    rel_entities,simple = get_db_entities(questions)
     relations,entities = get_entities_relations(rel_entities)
     surf_names = get_surface_names(entities)
     e_features = {}
+    r_features = {}
     for entity in entities:
         feature = construct_feature(phr,entity,surf_names)
         # e_features.append(feature)
         e_features[entity] = feature
-    return e_features
+    e_features['x'] = []
+    for relation in relations:
+        e_features[relation] = []
+    # r_features['x'] = []
+    return e_features # + r_features
 
 def construct_feature(phr,entity,surf_names):
     feature = []
@@ -198,18 +213,33 @@ def create_examples(questions,phrases,dags):
     instances = []
     for i in range(10):
         instances.append(Instance(phrases[i],e_features,dags[i],gold[i]))
-    return instances
+    return instances,e_features
+
+def init_weights(features,weights):
+    for k in features.keys():
+
+        for f in features[k]:
+            if f not in weights.keys():
+                weights[f] = {}
+                for j in features.keys():
+                    weights[f][j] = 0
+                weights[f]['x'] = 0
+
+    return weights
 
 if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\free917.train.examples.canonicalized.json"
-    questions = json.load(open(path),object_hook=object_decoder)[:10]
+    questions = json.load(open(path),object_hook=object_decoder)[:100]
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
     labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))
     phrases = parse_phrases(questions,labels)
     dags = parse_dags(phrases)
-    # features = create_features(questions,phrases)
-    rel_entities = get_db_entities(questions)
+    examples,features = create_examples(questions,phrases,dags)
+    rel_entities,simple = get_db_entities(questions)
+    # pickle.dump(simple,open("simple_questions.pickle","wb"))
     relations,entities = get_entities_relations(rel_entities)
+    W = train_with_beam(500,examples,init_weights(features,{}),50,entities,relations,features)
+    features = create_features(questions,phrases)
     # surf_names = get_surface_names(entities)
-    gold = gold_standard(phrases,dags,rel_entities)
-    pickle.dump(gold,open('query_gold_10.pickle','wb'))
+    # gold = gold_standard(phrases,dags,rel_entities)
+    # pickle.dump(gold,open('query_gold_10.pickle','wb'))
