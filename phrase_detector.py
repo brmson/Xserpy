@@ -50,10 +50,10 @@ if __name__ == "__main__":
     parser.add_argument("n_iter",help="iterations",type=int,default=0)
     args = parser.parse_args()
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    words = pickle.load(open(path+"annotate\\phrase_detect_features_90_arr.pickle"))
-    labels = pickle.load(open(path+"data\\labels_trn_90.pickle"))
+    words = pickle.load(open(path+"annotate\\phrase_detect_features_40_arr.pickle"))
+    labels = pickle.load(open(path+"data\\labels_trn_40.pickle"))
     # print len(words),len(labels)
     # n = len(words[0])
     examples = zip(words,labels)
     w = train(args.n_iter,examples,init_weights(examples,{},5),5)
-    # pickle.dump(w,open("w_90_"+str(args.n_iter)+".pickle","wb"))
+    pickle.dump(w,open("w_90_"+str(args.n_iter)+".pickle","wb"))

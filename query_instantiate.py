@@ -19,16 +19,16 @@ def score(buff,weights,cl):
     result = [r[0] for r in res]
     return result
 
-def beam_search(instance,size,phrase_labels,dependency_labels,weights):
+def beam_search(instance,size,dependency_labels,weights):
     beam = [[]]
     for i in range(len(instance.sentence)):
         buff = []
 
         for z in beam:
-            for p in phrase_labels:
+            for p in instance.candidates:
                 buff.append(z + [p])
         random.shuffle(buff)
-        beam = score(buff,weights,len(phrase_labels))[:size]
+        beam = score(buff,weights,len(instance.candidates))[:size]
         index = i*(len(instance.sentence)+1)
         label = instance.label[index]
         if label not in [b[-1] for b in beam]:
@@ -51,13 +51,13 @@ def beam_search(instance,size,phrase_labels,dependency_labels,weights):
 
     return beam[0]
 
-def train_with_beam(n_iter,examples,weights,size,phrase_labels,dependency_labels,features):
+def train_with_beam(n_iter,examples,weights,size,dependency_labels,features):
     learning_rate = 1
     for i in range(n_iter):
         err = 0
         for instance in examples:
             true = instance.label
-            guess = beam_search(instance,size,['x']+phrase_labels,['x']+dependency_labels,weights)
+            guess = beam_search(instance,size,['x']+dependency_labels,weights)
 
             if guess != true:
                 for j in range(len(guess)):
@@ -212,7 +212,7 @@ def create_examples(questions,phrases,dags):
     e_features = create_features(questions,phrases)
     instances = []
     for i in range(10):
-        instances.append(Instance(phrases[i],e_features,dags[i],gold[i]))
+        instances.append(Instance(phrases[i],generate_candidates(questions[i],e_features),dags[i],gold[i]))
     return instances,e_features
 
 def init_weights(features,weights):
@@ -227,6 +227,17 @@ def init_weights(features,weights):
 
     return weights
 
+def generate_candidates(question,features):
+    strings,temp = get_entity(question.targetFormula)
+    candidates = features.keys()[:]
+    for s in strings:
+        candidates.remove(s)
+    indices = random.sample(xrange(len(candidates)),len(strings))
+    for i in indices:
+        strings.append(candidates[i])
+    strings.append('x')
+    return strings
+
 if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\free917.train.examples.canonicalized.json"
     questions = json.load(open(path),object_hook=object_decoder)[:100]
@@ -238,7 +249,7 @@ if __name__ == "__main__":
     rel_entities,simple = get_db_entities(questions)
     # pickle.dump(simple,open("simple_questions.pickle","wb"))
     relations,entities = get_entities_relations(rel_entities)
-    W = train_with_beam(500,examples,init_weights(features,{}),50,entities,relations,features)
+    W = train_with_beam(50,examples,init_weights(features,{}),10,relations,features)
     features = create_features(questions,phrases)
     # surf_names = get_surface_names(entities)
     # gold = gold_standard(phrases,dags,rel_entities)
