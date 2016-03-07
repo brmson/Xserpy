@@ -140,18 +140,18 @@ def parse_dags(phrases):
                 q = phrase[j]
                 if p[1] == 0:
                     if q[1] == 1:
-                        dag[i].append(j)
-                    elif q[1] == 3:
                         dag[j].append(i)
+                    elif q[1] == 3:
+                        dag[i].append(j)
                 elif p[1] == 1 and q[1] == 0:
-                    dag[j].append(i)
+                    dag[i].append(j)
                 elif p[1] == 2 and q[1] == 3:
-                    dag[j].append(i)
+                    dag[i].append(j)
                 elif p[1] == 3:
                     if q[1] == 2:
-                        dag[i].append(j)
+                        dag[j].append(i)
                     elif q[1] == 0:
-                        dag[i].append(j)
+                        dag[j].append(i)
         dags.append(dag)
     return dags
 
@@ -166,8 +166,8 @@ if __name__ == "__main__":
     # words = pickle.load(open(path+"annotate\\phrase_detect_features_100_arr.pickle"))
     labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))
     questions = json.load(open(args.fpath),object_hook=object_decoder)
-    annotate_questions_label(questions,120)
+    # annotate_questions_label(questions,120)
     # bootstrap(questions,words,labels,10,100,40)
-    # phrases = parse_phrases(questions[:100],labels)
-    # dags = parse_dags(phrases)
-    # pickle.dump(dags,open("dags_100.pickle","wb"))
+    phrases = parse_phrases(questions[:100],labels)
+    dags = parse_dags(phrases)
+    pickle.dump(dags,open(path+"data\\dags_100.pickle","wb"))
