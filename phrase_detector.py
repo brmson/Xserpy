@@ -30,7 +30,7 @@ def init_weights(examples,weights,cl):
     return weights
 
 def train(n_iter, examples,weights,cl):
-    learning_rate = 0.1
+    learning_rate = 10
     for i in range(n_iter):
         err = 0
         for features, true in examples:
@@ -54,6 +54,7 @@ if __name__ == "__main__":
     labels = pickle.load(open(path+"data\\labels_trn_40.pickle"))
     # print len(words),len(labels)
     # n = len(words[0])
-    examples = zip(words,labels)
+    # examples = zip(words,labels)
+    examples = pickle.load(open(path+"data\\all_examples.pickle"))
     w = train(args.n_iter,examples,init_weights(examples,{},5),5)
-    pickle.dump(w,open("w_90_"+str(args.n_iter)+".pickle","wb"))
+    pickle.dump(w,open(path+"models\\w_all_"+str(args.n_iter)+".pickle","wb"))

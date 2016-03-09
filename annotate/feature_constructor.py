@@ -105,8 +105,8 @@ if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
     pos_tagged = pickle.load(open(path + "data\\pos_tagged.pickle"))
     ner_tagged = pickle.load(open(path + "data\\ner_tagged.pickle"))
-    size = 40
+    size = 100
     # weights = pickle.load(open(path+"models\\w_90_50.pickle"))
     c = create_features(questions[:size],pos_tagged,ner_tagged,path+"data\\questions_trn_"+str(size)+".pickle")
     # labelled = label_phrases(questions[90:180],pos_tagged,ner_tagged,weights)
-    pickle.dump(c,open("phrase_detect_features_40_arr.pickle","wb"))
+    pickle.dump(c,open("phrase_detect_features_"+str(size)+"_arr.pickle","wb"))

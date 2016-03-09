@@ -48,21 +48,23 @@ def bootstrap(questions,features,labels,step,n_iter,start):
     ner_tagged = pickle.load(open(path + "data\\ner_tagged.pickle"))
     examples = zip(features,labels)
     i = start
-    ll = open("labels.txt",'w')
+    L = []
+    # ll = open("labels.txt",'w')
     weights = init_weights(examples,{},5)
     while i < len(questions):
         weights = train(n_iter,examples,weights,5)
         f, l = label_phrases(questions[i:min(len(questions),i+step)],pos_tagged[i:min(len(questions),i+step)],ner_tagged[i:min(len(questions),i+step)],weights)
-        for L in l:
-            print L
-            ll.write(str(L)+"\n")
+        # for L in l:
+        #     print L
+        #     ll.write(str(L)+"\n")
+        L += l
         weights = init_weights(zip(f,l),weights,5)
         examples = examples + zip(f,l)
         i = i + step
-        print i
-        ll.flush()
-    ll.close()
-    return examples
+    #     print i
+    #     ll.flush()
+    # ll.close()
+    return labels + L
 
 def parse_to_phrases(questions,labels):
     phrases = []
@@ -155,6 +157,17 @@ def parse_dags(phrases):
         dags.append(dag)
     return dags
 
+def examples_to_phrases(examples,questions):
+    i = 0
+    result = []
+    for q in questions:
+        phrase = []
+        u = q.utterance.split()
+        for U in u:
+            phrase.append(examples[i])
+            i += 1
+        result.append(phrase)
+    return result
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Annotate questions with DAGs")
@@ -163,11 +176,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    # words = pickle.load(open(path+"annotate\\phrase_detect_features_100_arr.pickle"))
-    labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))
+    words = pickle.load(open(path+"annotate\\phrase_detect_features_100_arr.pickle"))
+    labels = pickle.load(open(path+"data\\labels_trn_100.pickle"))
     questions = json.load(open(args.fpath),object_hook=object_decoder)
     # annotate_questions_label(questions,120)
-    # bootstrap(questions,words,labels,10,100,40)
-    phrases = parse_phrases(questions[:100],labels)
-    dags = parse_dags(phrases)
-    pickle.dump(dags,open(path+"data\\dags_100.pickle","wb"))
+    examples = bootstrap(questions,words,labels,40,50,100)
+    # phrases = parse_phrases(questions[:100],labels)
+    # dags = parse_dags(phrases)
+    pickle.dump(examples,open(path+"data\\all_examples.pickle","wb"))

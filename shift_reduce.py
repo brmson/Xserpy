@@ -1,4 +1,4 @@
-from annotate.annotator import Question,object_decoder,json
+from annotate.annotator import Question,object_decoder,json,examples_to_phrases,parse_dags
 from phrase_detector import train,predict,init_weights,compute_score
 import pickle,time
 
@@ -16,22 +16,43 @@ class Item(object):
         features = []
         if stack:
             head = stack[-1]
-            features.append(pos[head][:-1])
+            #
+            features.append("ST_p_"+pos[head][:-1])
             features.append("ST_w_"+phrase[head][0])
             features.append("ST_p_w_"+pos[head]+phrase[head][0])
         if queue:
             next = queue[0]
-            features.append(pos[next][:-1])
+            features.append("N0_p_"+pos[next][:-1])
             features.append("N0_w_"+phrase[next][0])
-            features.append("N0_p_w_"+pos[next]+phrase[next][0])
+            features.append("N0_p_w_"+pos[next][:-1]+phrase[next][0])
+
             features.append("N0_t_"+str(phrase[next][1]))
-            features.append("N0_t_p_"+str(phrase[next][1])+"_"+pos[next])
+            features.append("N0_t_p_"+str(phrase[next][1])+"_"+pos[next][:-1])
             features.append("N0_t_w_"+str(phrase[next][1])+"_"+phrase[next][0])
             if stack:
                 head = stack[-1]
-                features.append("ST_p_w_"+pos[head]+phrase[head][0]+"_"+"N0_p_w_"+pos[next]+phrase[next][0])
-                features.append("ST_p_w_"+pos[head]+phrase[head][0]+"_"+"N0_w_"+phrase[next][0])
+                features.append("ST_p_w_"+pos[head][:-1] + phrase[head][0]+"_"+"N0_p_w_"+pos[next][:-1] + phrase[next][0])
+                features.append("ST_p_w_"+pos[head][:-1] + phrase[head][0]+"_"+"N0_w_"+phrase[next][0])
 
+                features.append("ST_t_"+str(phrase[head][1])+"_"+"N0_p_"+pos[next][:-1])
+                features.append("ST_w_"+phrase[head][0]+"_"+"N0_t_"+str(phrase[next][1]))
+
+                features.append("ST_p_"+pos[head][:-1]+"_"+"N0_p_"+pos[next][:-1])
+                features.append("ST_t_"+str(phrase[head][1])+"_"+"N0_t_"+str(phrase[next][1]))
+        if len(queue) > 1:
+            next = queue[1]
+            features.append("N1_p_"+pos[next][:-1])
+            features.append("N1_w_"+phrase[next][0])
+            features.append("N1_p_w_"+pos[next][:-1]+phrase[next][0])
+
+            features.append("N1_t_"+str(phrase[next][1]))
+            features.append("N1_t_p_"+str(phrase[next][1])+"_"+pos[next][:-1])
+            features.append("N1_t_w_"+str(phrase[next][1])+"_"+phrase[next][0])
+
+            features.append("N0_p_"+pos[queue[0]][:-1]+"N1_p_"+pos[next][:-1])
+            if len(queue) > 2:
+                features.append("N0_p_"+pos[queue[0]][:-1]+"N1_p_"+pos[next][:-1]+"N2_p_"+pos[queue[2]][:-1])
+                features.append("N0_w_"+str(phrase[queue[0]][1])+"N1_p_"+pos[next][:-1]+"N2_p_"+pos[queue[2]][:-1])
         return features
 
 def shift(item):
@@ -208,15 +229,16 @@ def batch_shift_reduce(sentences,pos,weights,size):
 if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
     questions = json.load(open(path+"data\\free917.train.examples.canonicalized.json"),object_hook=object_decoder)
-    labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))
+    labels = pickle.load(open(path+"data\\all_examples.pickle"))
     dags = pickle.load(open(path+"annotate\\dags_100.pickle"))
     pos_tagged = pickle.load(open(path + "data\\pos_tagged.pickle"))
     i = 10
-    phrases,pos = parse_to_phrases(questions[:i],labels[:i],pos_tagged[:i])
-    start = time.time()
-    examples = derive_labels(dags[:i],phrases,pos)
+    phr = examples_to_phrases(labels,questions)
+    phrases,pos = parse_to_phrases(questions,phr,pos_tagged)
+    # dags = parse_dags(phrases)
+    examples = derive_labels(dags,phrases,pos)
     c = 4
-    size = 20
+    size = -1
     weights = train(50,examples,init_weights(examples,{},c),c)
-    dags = batch_shift_reduce(phrases,pos,weights,size)
-    print time.time()-start
+    # DAGs = batch_shift_reduce(phrases,pos,weights,size)
+    # pickle.dump(weights,open(path+"models\\w_dag_all.pickle","wb"))

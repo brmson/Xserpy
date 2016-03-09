@@ -19,7 +19,7 @@ def score(buff,weights,cl):
     result = [r[0] for r in res]
     return result
 
-def beam_search(instance,size,dependency_labels,weights):
+def beam_search(instance,size,dependency_labels,weights,training=True):
     beam = [[]]
     for i in range(len(instance.sentence)):
         buff = []
@@ -31,7 +31,7 @@ def beam_search(instance,size,dependency_labels,weights):
         beam = score(buff,weights,len(instance.candidates))[:size]
         index = i*(len(instance.sentence)+1)
         label = instance.label[index]
-        if label not in [b[-1] for b in beam]:
+        if label not in [b[-1] for b in beam] and training:
             return beam[0]
 
         for c in range(len(instance.sentence)):
@@ -46,7 +46,7 @@ def beam_search(instance,size,dependency_labels,weights):
             random.shuffle(buff)
             beam = score(buff,weights,len(dependency_labels))[:size]
             label = instance.label[index+1:index+c+3]
-            if label not in beam:
+            if label not in beam  and training:
                 return beam[0]
 
     return beam[0]
@@ -163,7 +163,7 @@ def gold_standard(phrases,dags,entities):
                      res.append(t)
                  else:
                      inp = raw_input(t+" ")
-                     if inp == 'x':
+                     if inp == 'x' or inp == 'SC' or inp == 'SP' or inp == 'PO':
                          res.append(inp)
                      else:
                          res.append(entity[int(inp)])
@@ -208,10 +208,10 @@ def construct_feature(phr,entity,surf_names):
     return feature
 
 def create_examples(questions,phrases,dags):
-    gold = pickle.load(open('query_gold_10.pickle'))
+    gold = pickle.load(open('query_int_20.pickle'))
     e_features = create_features(questions,phrases)
     instances = []
-    for i in range(10):
+    for i in range(len(questions)):
         instances.append(Instance(phrases[i],generate_candidates(questions[i],e_features),dags[i],gold[i]))
     return instances,e_features
 
@@ -232,17 +232,18 @@ def generate_candidates(question,features):
     candidates = features.keys()[:]
     for s in strings:
         candidates.remove(s)
-    indices = random.sample(xrange(len(candidates)),len(strings))
-    for i in indices:
-        strings.append(candidates[i])
-    strings.append('x')
+    if len(candidates) >= len(strings):
+        indices = random.sample(xrange(len(candidates)),len(strings))
+        for i in indices:
+            strings.append(candidates[i])
+    # strings.append('x')
     return strings
 
 if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\free917.train.examples.canonicalized.json"
-    questions = json.load(open(path),object_hook=object_decoder)[:100]
+    questions = json.load(open(path),object_hook=object_decoder)[:20]
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))
+    labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))[:20]
     phrases = parse_phrases(questions,labels)
     dags = parse_dags(phrases)
     examples,features = create_examples(questions,phrases,dags)
@@ -250,7 +251,7 @@ if __name__ == "__main__":
     # pickle.dump(simple,open("simple_questions.pickle","wb"))
     relations,entities = get_entities_relations(rel_entities)
     W = train_with_beam(50,examples,init_weights(features,{}),10,relations,features)
-    features = create_features(questions,phrases)
+    # features = create_features(questions,phrases)
     # surf_names = get_surface_names(entities)
     # gold = gold_standard(phrases,dags,rel_entities)
-    # pickle.dump(gold,open('query_gold_10.pickle','wb'))
+    pickle.dump(W,open('models\\w_qint.pickle','wb'))

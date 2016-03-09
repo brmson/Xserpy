@@ -20,7 +20,8 @@ def convert_to_queries(dag,phrase):
                     query = dag[index]+" object.type "+dag[k]
                 else:
                     query = dag[index] + " " + edges[j] + " " + dag[k]
-        queries.append(query)
+        if len(query) > 0:
+            queries.append(query)
     return queries
 
 def create_query_file(filename,queries):
@@ -33,9 +34,9 @@ def create_query_file(filename,queries):
     f.close()
 
 if __name__ == "__main__":
-    dags = pickle.load(open("query_gold_10.pickle"))
+    dags = pickle.load(open("query_int_20.pickle"))
     phrases = pickle.load(open("annotate\\dags_100.pickle"))
     q = []
     for d,p in zip(dags,phrases):
         q.append(convert_to_queries(d,p))
-    create_query_file("test_query.txt",q[0])
+    create_query_file("test_query.txt",q[15])
