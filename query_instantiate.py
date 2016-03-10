@@ -241,17 +241,19 @@ def generate_candidates(question,features):
 
 if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\free917.train.examples.canonicalized.json"
-    questions = json.load(open(path),object_hook=object_decoder)[:20]
+    start = 30
+    end = 40
+    questions = json.load(open(path),object_hook=object_decoder)[start:end]
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))[:20]
+    labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))[start:end]
     phrases = parse_phrases(questions,labels)
     dags = parse_dags(phrases)
     examples,features = create_examples(questions,phrases,dags)
     rel_entities,simple = get_db_entities(questions)
     # pickle.dump(simple,open("simple_questions.pickle","wb"))
     relations,entities = get_entities_relations(rel_entities)
-    W = train_with_beam(50,examples,init_weights(features,{}),10,relations,features)
+    # W = train_with_beam(50,examples,init_weights(features,{}),10,relations,features)
     # features = create_features(questions,phrases)
     # surf_names = get_surface_names(entities)
-    # gold = gold_standard(phrases,dags,rel_entities)
-    pickle.dump(W,open('models\\w_qint.pickle','wb'))
+    gold = gold_standard(phrases,dags,rel_entities)
+    pickle.dump(gold,open('query_gold_'+str(start)+'_'+str(end)+'.pickle','wb'))

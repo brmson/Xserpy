@@ -10,9 +10,9 @@ class Item(object):
         self.sequence = sequence
         self.data = data[:]
         self.features = features[:]
-        self.features.append(self.construct_features(data[0],data[1],stack,queue))
+        self.features.append(self.construct_features(data[0],data[1],stack,queue,dag))
 
-    def construct_features(self,phrase,pos,stack,queue):
+    def construct_features(self,phrase,pos,stack,queue,dag):
         features = []
         if stack:
             head = stack[-1]
@@ -39,6 +39,11 @@ class Item(object):
 
                 features.append("ST_p_"+pos[head][:-1]+"_"+"N0_p_"+pos[next][:-1])
                 features.append("ST_t_"+str(phrase[head][1])+"_"+"N0_t_"+str(phrase[next][1]))
+
+                if head in dag[next]:
+                    features.append("AR_"+phrase[head][0]+"_"+"_"+phrase[next][0])
+                if next in dag[head]:
+                    features.append("AL_"+phrase[next][0]+"_"+"_"+phrase[head][0])
         if len(queue) > 1:
             next = queue[1]
             features.append("N1_p_"+pos[next][:-1])
@@ -284,15 +289,21 @@ def compute_error(dags,gold):
         dag = dags[i].dag
         g = gold[i]
         # print i,len(dag),len(g)
-        if len(dag) == len(g):
+        if dag != gold:
+            error += 1.0
+        if len(dag) == len(g) and False:
+            D = 0
             for j in range(len(dag)):
                 a = dag[j]
                 b = g[j]
                 d = list(set(a).difference(b))+list(set(b).difference(a))
-                error += float(len(d))
-                total += len(dag)
+                if len(d) > 0:
+                    D = 1.0
+            error += D
+                # error += float(len(d))
+                # total += len(dag)
 
-    return error/total
+    return error/len(dags)
 
 
 if __name__ == "__main__":

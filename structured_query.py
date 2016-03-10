@@ -27,10 +27,10 @@ def convert_to_queries(dag,phrase):
 def create_query_file(filename,queries):
     i = 0
     f = open(filename,"w")
-    f.write("prefix : <http://rdf.basekb.com/ns/>\nselect ?x {\n")
+    f.write("PREFIX : <http://rdf.basekb.com/ns/>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\nSELECT ?name {\n")
     for q in queries:
         f.write(q + ' . \n')
-    f.write('}\n')
+    f.write('?year rdfs:label ?name .\nFILTER (lang(?name)= \'en\')\n}\n')
     f.close()
 
 if __name__ == "__main__":
