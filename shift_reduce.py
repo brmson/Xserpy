@@ -1,4 +1,4 @@
-from annotate.annotator import Question,object_decoder,json,examples_to_phrases,parse_dags
+from annotate.annotator import Question,object_decoder,json,examples_to_phrases
 from phrase_detector import train,predict,init_weights,compute_score
 import pickle,time
 
@@ -131,6 +131,57 @@ def check_dag(gold,dag):
                 return False
     return True
 
+def parse_phrases(questions,labels,pos):
+    pos_tag = []
+    phrases = []
+    for i in range(len(questions)):
+        u = [q for q in questions[i].utterance.split()]
+        label = [l for l in labels[i]]
+        POS = [p[1] for p in pos[i]]
+        j = 0
+        while label[j] == 4:
+            j += 1
+        phrase = [u[j]+" "]
+        pos_t = [POS[j]+'_']
+        k = 0
+        order = [label[j]]
+        while j < len(label):
+            if j + 1 >= len(label):
+                break
+            if label[j+1] == label[j]:
+                phrase[k] += u[j+1] + " "
+                pos_t[k] += POS[j+1] + '_'
+                u.remove(u[j+1])
+                POS.remove(POS[j+1])
+                label.remove(label[j+1])
+            else:
+                j += 1
+                k += 1
+                while label[j] == 4:
+                    j += 1
+                phrase.append(u[j] + " ")
+                pos_t.append(POS[j] + "_")
+                order.append(label[j])
+        m = 0
+        while m < len(phrase):
+            if order[m] == 0:
+                m += 1
+                continue
+            n = m + 1
+            while n < len(phrase):
+                if order[m] == order[n]:
+                    phrase[m] += phrase[n]
+                    pos_t[m] += pos_t[n]
+                    del phrase[n]
+                    del pos_t[n]
+                    del order[n]
+                n += 1
+            m += 1
+        # phrases.append(zip(phrase,order))
+        phrases.append(phrase)
+        pos_tag.append(pos_t)
+    return phrases,pos_tag
+
 def parse_to_phrases(questions,labels,pos_tagged):
     phrases = []
     pos_phrases = []
@@ -226,19 +277,41 @@ def batch_shift_reduce(sentences,pos,weights,size):
         result.append(shift_reduce(sentence,p,weights,size))
     return result
 
+def compute_error(dags,gold):
+    error = 0
+    total = 0
+    for i in range(len(dags)):
+        dag = dags[i].dag
+        g = gold[i]
+        # print i,len(dag),len(g)
+        if len(dag) == len(g):
+            for j in range(len(dag)):
+                a = dag[j]
+                b = g[j]
+                d = list(set(a).difference(b))+list(set(b).difference(a))
+                error += float(len(d))
+                total += len(dag)
+
+    return error/total
+
+
 if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    questions = json.load(open(path+"data\\free917.train.examples.canonicalized.json"),object_hook=object_decoder)
-    labels = pickle.load(open(path+"data\\all_examples.pickle"))
+    questions = json.load(open(path+"data\\free917.train.examples.canonicalized.json"),object_hook=object_decoder)[:100]
+    labels = pickle.load(open(path+"data\\labels_trn_100.pickle"))
+    labs = pickle.load(open(path+"data\\questions_trn_100.pickle"))
     dags = pickle.load(open(path+"annotate\\dags_100.pickle"))
     pos_tagged = pickle.load(open(path + "data\\pos_tagged.pickle"))
     i = 10
     phr = examples_to_phrases(labels,questions)
-    phrases,pos = parse_to_phrases(questions,phr,pos_tagged)
+    phrases,pos = parse_phrases(questions,labs,pos_tagged)
+    # phrases,pos = parse_to_phrases(questions,phr,pos_tagged)
     # dags = parse_dags(phrases)
-    examples = derive_labels(dags,phrases,pos)
+    # examples = derive_labels(dags,phrases,pos)
     c = 4
-    size = -1
-    weights = train(50,examples,init_weights(examples,{},c),c)
-    # DAGs = batch_shift_reduce(phrases,pos,weights,size)
-    # pickle.dump(weights,open(path+"models\\w_dag_all.pickle","wb"))
+    size = 30
+    e = 66
+    weights = pickle.load(open(path+"models\\w_dag_all.pickle")) # train(50,examples,init_weights(examples,{},c),c)
+    DAGs = batch_shift_reduce(phrases,pos,weights,size)
+    print compute_error(DAGs,dags)
+    # pickle.dump(weights,open(path+"   models\\w_dag_all.pickle","wb"))
