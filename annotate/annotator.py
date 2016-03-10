@@ -1,22 +1,22 @@
-import argparse,json,pickle
+import argparse, json, pickle
 from phrase_detector import *
 from feature_constructor import label_phrases
 
 
 
 class Question(object):
-    def __init__(self, utterance, targetFormula):
+    def __init__(self,  utterance,  targetFormula):
         self.utterance = utterance
         self.targetFormula = targetFormula
 
 def object_decoder(obj):
-    return Question(obj['utterance'], obj['targetFormula'])
+    return Question(obj['utterance'],  obj['targetFormula'])
 
 def annotate_questions_dag(phrases):
     dag = []
     for p in phrases:
-        if ("",0) in p:
-            p.remove(("",0))
+        if ("", 0) in p:
+            p.remove(("", 0))
         print p
         d = []
         for token in p:
@@ -25,9 +25,9 @@ def annotate_questions_dag(phrases):
         dag.append(d)
     return dag
 
-def annotate_questions_label(questions,start):
+def annotate_questions_label(questions, start):
     labeled = []
-    dic = {'e': 0,'r': 1,'c': 2,'v': 3,'n': 4}
+    dic = {'e': 0, 'r': 1, 'c': 2, 'v': 3, 'n': 4}
     for q in questions[start:start+20]:
         print q.utterance
         L = []
@@ -40,40 +40,40 @@ def annotate_questions_label(questions,start):
             L.append(label)
         # print M
         labeled.append(L)
-    pickle.dump(labeled,open("questions_train_"+str(start+1)+"_"+str(start+20)+".pickle","wb"))
+    pickle.dump(labeled, open("questions_train_"+str(start+1)+"_"+str(start+20)+".pickle", "wb"))
 
-def bootstrap(questions,features,labels,step,n_iter,start):
+def bootstrap(questions, features, labels, step, n_iter, start):
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
     pos_tagged = pickle.load(open(path + "data\\pos_tagged.pickle"))
     ner_tagged = pickle.load(open(path + "data\\ner_tagged.pickle"))
-    examples = zip(features,labels)
+    examples = zip(features, labels)
     i = start
     L = []
-    # ll = open("labels.txt",'w')
-    weights = init_weights(examples,{},5)
+    # ll = open("labels.txt", 'w')
+    weights = init_weights(examples, {}, 5)
     while i < len(questions):
-        weights = train(n_iter,examples,weights,5)
-        f, l = label_phrases(questions[i:min(len(questions),i+step)],pos_tagged[i:min(len(questions),i+step)],ner_tagged[i:min(len(questions),i+step)],weights)
+        weights = train(n_iter, examples, weights, 5)
+        f,  l = label_phrases(questions[i:min(len(questions), i+step)], pos_tagged[i:min(len(questions), i+step)], ner_tagged[i:min(len(questions), i+step)], weights)
         # for L in l:
         #     print L
         #     ll.write(str(L)+"\n")
         L += l
-        weights = init_weights(zip(f,l),weights,5)
-        examples = examples + zip(f,l)
+        weights = init_weights(zip(f, l), weights, 5)
+        examples = examples + zip(f, l)
         i = i + step
     #     print i
     #     ll.flush()
     # ll.close()
     return labels + L
 
-def parse_to_phrases(questions,labels):
+def parse_to_phrases(questions, labels):
     phrases = []
     for i in range(len(questions)):
         u = questions[i].utterance.split()
         label = labels[i]
         dic = {}
-        phrase = ["","","",""]
-        order = [0,0,0,0]
+        phrase = ["", "", "", ""]
+        order = [0, 0, 0, 0]
         j = 0
         for index in range(len(label)):
             l = label[index]
@@ -86,10 +86,10 @@ def parse_to_phrases(questions,labels):
                 order[j] = l
                 j += 1
             phrase[dic[l]] += word + " "
-        phrases.append(zip(phrase,order))
+        phrases.append(zip(phrase, order))
     return phrases
 
-def parse_phrases(questions,labels):
+def parse_phrases(questions, labels):
     phrases = []
     for i in range(len(questions)):
         u = [q for q in questions[i].utterance.split()]
@@ -127,7 +127,7 @@ def parse_phrases(questions,labels):
                     del order[n]
                 n += 1
             m += 1
-        phrases.append(zip(phrase,order))
+        phrases.append(zip(phrase, order))
     return phrases
 
 def parse_dags(phrases):
@@ -138,7 +138,7 @@ def parse_dags(phrases):
             p = phrase[i]
             # if p[1] == 2 or p[1] == [1]:
             #     continue
-            for j in range(i+1,len(phrase)):
+            for j in range(i+1, len(phrase)):
                 q = phrase[j]
                 if p[1] == 0:
                     if q[1] == 1:
@@ -157,7 +157,7 @@ def parse_dags(phrases):
         dags.append(dag)
     return dags
 
-def examples_to_phrases(examples,questions):
+def examples_to_phrases(examples, questions):
     i = 0
     result = []
     for q in questions:
@@ -171,16 +171,16 @@ def examples_to_phrases(examples,questions):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Annotate questions with DAGs")
-    parser.add_argument("fpath",help="filepath",type=str)
-    parser.add_argument("start",help="start",type=int,default=0)
+    parser.add_argument("fpath", help="filepath", type=str)
+    parser.add_argument("start", help="start", type=int, default=0)
     args = parser.parse_args()
 
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
     words = pickle.load(open(path+"annotate\\phrase_detect_features_100_arr.pickle"))
     labels = pickle.load(open(path+"data\\labels_trn_100.pickle"))
-    questions = json.load(open(args.fpath),object_hook=object_decoder)
-    # annotate_questions_label(questions,120)
-    examples = bootstrap(questions,words,labels,40,50,100)
-    # phrases = parse_phrases(questions[:100],labels)
+    questions = json.load(open(args.fpath), object_hook=object_decoder)
+    # annotate_questions_label(questions, 120)
+    examples = bootstrap(questions, words, labels, 40, 50, 100)
+    # phrases = parse_phrases(questions[:100], labels)
     # dags = parse_dags(phrases)
-    pickle.dump(examples,open(path+"data\\all_examples.pickle","wb"))
+    pickle.dump(examples, open(path+"data\\all_examples.pickle", "wb"))

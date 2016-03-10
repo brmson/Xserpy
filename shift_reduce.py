@@ -1,18 +1,18 @@
-from annotate.annotator import Question,object_decoder,json,examples_to_phrases
-from phrase_detector import train,predict,init_weights,compute_score
-import pickle,time
+from annotate.annotator import Question, object_decoder, json, examples_to_phrases, parse_dags
+from phrase_detector import train, predict, init_weights, compute_score
+import pickle, time
 
 class Item(object):
-    def __init__(self,stack,queue,dag,sequence,features,data):
+    def __init__(self, stack, queue, dag, sequence, features, data):
         self.stack = stack
         self.queue = queue
         self.dag = dag
         self.sequence = sequence
         self.data = data[:]
         self.features = features[:]
-        self.features.append(self.construct_features(data[0],data[1],stack,queue,dag))
+        self.features.append(self.construct_features(data[0], data[1], stack, queue, dag))
 
-    def construct_features(self,phrase,pos,stack,queue,dag):
+    def construct_features(self, phrase, pos, stack, queue, dag):
         features = []
         if stack:
             head = stack[-1]
@@ -24,54 +24,54 @@ class Item(object):
             next = queue[0]
             features.append("N0_p_"+pos[next][:-1])
             features.append("N0_w_"+phrase[next][0])
-            features.append("N0_p_w_"+pos[next][:-1]+phrase[next][0])
+            features.append("N0_p_w_"+pos[next]+phrase[next][0])
 
             features.append("N0_t_"+str(phrase[next][1]))
             features.append("N0_t_p_"+str(phrase[next][1])+"_"+pos[next][:-1])
             features.append("N0_t_w_"+str(phrase[next][1])+"_"+phrase[next][0])
             if stack:
                 head = stack[-1]
-                features.append("ST_p_w_"+pos[head][:-1] + phrase[head][0]+"_"+"N0_p_w_"+pos[next][:-1] + phrase[next][0])
-                features.append("ST_p_w_"+pos[head][:-1] + phrase[head][0]+"_"+"N0_w_"+phrase[next][0])
+                features.append("ST_p_w_"+pos[head] + phrase[head][0]+"_"+"N0_p_w_"+pos[next] + phrase[next][0])
+                features.append("ST_p_w_"+pos[head] + phrase[head][0]+"_"+"N0_w_"+phrase[next][0])
 
                 features.append("ST_t_"+str(phrase[head][1])+"_"+"N0_p_"+pos[next][:-1])
                 features.append("ST_w_"+phrase[head][0]+"_"+"N0_t_"+str(phrase[next][1]))
 
-                features.append("ST_p_"+pos[head][:-1]+"_"+"N0_p_"+pos[next][:-1])
+                features.append("ST_p_"+pos[head]+"N0_p_"+pos[next][:-1])
                 features.append("ST_t_"+str(phrase[head][1])+"_"+"N0_t_"+str(phrase[next][1]))
 
                 if head in dag[next]:
-                    features.append("AR_"+phrase[head][0]+"_"+"_"+phrase[next][0])
+                    features.append("AR_"+phrase[head][0]+"_"+phrase[next][0])
                 if next in dag[head]:
-                    features.append("AL_"+phrase[next][0]+"_"+"_"+phrase[head][0])
+                    features.append("AL_"+phrase[next][0]+"_"+phrase[head][0])
         if len(queue) > 1:
             next = queue[1]
             features.append("N1_p_"+pos[next][:-1])
             features.append("N1_w_"+phrase[next][0])
-            features.append("N1_p_w_"+pos[next][:-1]+phrase[next][0])
+            features.append("N1_p_w_"+pos[next]+phrase[next][0])
 
             features.append("N1_t_"+str(phrase[next][1]))
             features.append("N1_t_p_"+str(phrase[next][1])+"_"+pos[next][:-1])
             features.append("N1_t_w_"+str(phrase[next][1])+"_"+phrase[next][0])
 
-            features.append("N0_p_"+pos[queue[0]][:-1]+"N1_p_"+pos[next][:-1])
+            features.append("N0_p_"+pos[queue[0]]+"N1_p_"+pos[next][:-1])
             if len(queue) > 2:
-                features.append("N0_p_"+pos[queue[0]][:-1]+"N1_p_"+pos[next][:-1]+"N2_p_"+pos[queue[2]][:-1])
-                features.append("N0_w_"+str(phrase[queue[0]][1])+"N1_p_"+pos[next][:-1]+"N2_p_"+pos[queue[2]][:-1])
+                features.append("N0_p_"+pos[queue[0]]+"N1_p_"+pos[next]+"N2_p_"+pos[queue[2]][:-1])
+                features.append("N0_w_"+str(phrase[queue[0]][1])+"N1_p_"+pos[next]+"N2_p_"+pos[queue[2]][:-1])
         return features
 
 def shift(item):
     q = item.queue[0]
     s = item.stack[:]
     s.append(q)
-    return Item(s,item.queue[1:],item.dag,item.sequence+[0],item.features,item.data)
+    return Item(s, item.queue[1:], item.dag, item.sequence+[0], item.features, item.data)
 
 def reduce_item(item):
     s = item.stack[:]
     if not s:
         return None
     s.pop()
-    return Item(s,item.queue,item.dag,item.sequence+[1],item.features,item.data)
+    return Item(s, item.queue, item.dag, item.sequence+[1], item.features, item.data)
 
 def arcleft(item):
     d = [d[:] for d in item.dag]
@@ -82,7 +82,7 @@ def arcleft(item):
         return None
     else:
         d[item.stack[-1]] += [item.queue[0]]
-    return Item(item.stack,q,d,item.sequence+[2],item.features,item.data)
+    return Item(item.stack, q, d, item.sequence+[2], item.features, item.data)
 
 def arcright(item):
     d = [dd[:] for dd in item.dag]
@@ -93,18 +93,18 @@ def arcright(item):
         return None
     else:
         d[item.queue[0]] += [item.stack[-1]]
-    return Item(item.stack,q,d,item.sequence+[3],item.features,item.data)
+    return Item(item.stack, q, d, item.sequence+[3], item.features, item.data)
 
-def shift_reduce(sentence,pos,weights,size):
-    actions = [shift,reduce_item,arcleft,arcright]
+def shift_reduce(sentence, pos, weights, size):
+    actions = [shift, reduce_item, arcleft, arcright]
     deque = []
-    start_item = type('TestItem', (), {})() # Item([],sentence,False,[],[],[])
+    start_item = type('TestItem',  (),  {})() # Item([], sentence, False, [], [], [])
     start_item.queue = range(len(sentence))
     start_item.stack = []
     start_item.dag = [[] for sen in range(len(sentence))]
     start_item.features = []
     start_item.sequence = []
-    start_item.data = [sentence,pos]
+    start_item.data = [sentence, pos]
     start_item = shift(start_item)
     start_item.score = 0
     deque.append(start_item)
@@ -117,7 +117,7 @@ def shift_reduce(sentence,pos,weights,size):
                 new_item = actions[i](item)
                 if new_item is None:
                     continue
-                new_score = item.score + compute_score(new_item.features[-1],weights,i)
+                new_score = item.score + compute_score(new_item.features[-1], weights, i)
                 new_item.score = new_score
                 if not new_item.queue:
                     if result is None or new_score > score:
@@ -125,18 +125,18 @@ def shift_reduce(sentence,pos,weights,size):
                         score = new_score
                 else:
                     lst.append(new_item)
-        lst.sort(key=lambda x: x.score, reverse=True)
+        lst.sort(key=lambda x: x.score,  reverse=True)
         deque = lst[:size]
     return result
 
-def check_dag(gold,dag):
-    for item in zip(gold,dag):
+def check_dag(gold, dag):
+    for item in zip(gold, dag):
         for i in item[1]:
             if i not in item[0]:
                 return False
     return True
 
-def parse_phrases(questions,labels,pos):
+def parse_phrases(questions, labels, pos):
     pos_tag = []
     phrases = []
     for i in range(len(questions)):
@@ -182,12 +182,12 @@ def parse_phrases(questions,labels,pos):
                     del order[n]
                 n += 1
             m += 1
-        # phrases.append(zip(phrase,order))
+        # phrases.append(zip(phrase, order))
         phrases.append(phrase)
         pos_tag.append(pos_t)
-    return phrases,pos_tag
+    return phrases, pos_tag
 
-def parse_to_phrases(questions,labels,pos_tagged):
+def parse_to_phrases(questions, labels, pos_tagged):
     phrases = []
     pos_phrases = []
     for i in range(len(questions)):
@@ -195,9 +195,9 @@ def parse_to_phrases(questions,labels,pos_tagged):
         label = labels[i]
         pos = pos_tagged[i]
         dic = {}
-        phrase = ["","","",""]
-        pos_phrase = ["","","",""]
-        order = [0,0,0,0]
+        phrase = ["", "", "", ""]
+        pos_phrase = ["", "", "", ""]
+        order = [0, 0, 0, 0]
         j = 0
         for index in range(len(label)):
             l = label[index]
@@ -212,11 +212,11 @@ def parse_to_phrases(questions,labels,pos_tagged):
                 j += 1
             phrase[dic[l]] += word + " "
             pos_phrase[dic[l]] += p[1]+"_"
-        phrases.append(zip(phrase,order))
+        phrases.append(zip(phrase, order))
         pos_phrases.append(pos_phrase)
-    return phrases,pos_phrases
+    return phrases, pos_phrases
 
-def derive_labels(dags,phrases,pos):
+def derive_labels(dags, phrases, pos):
     sequences = []
     features = []
     # shift = 0
@@ -226,15 +226,15 @@ def derive_labels(dags,phrases,pos):
     for i in range(len(dags)):
         # print i
         sequence = None
-        if ("",0) in phrases[i]:
-            phrases[i].remove(("",0))
+        if ("", 0) in phrases[i]:
+            phrases[i].remove(("", 0))
         phrase = range(len(phrases[i]))
         ddag = dags[i]
         dag = []
         for dd in ddag:
             dag.append([int(d) for d in dd])
         # print dag
-        new_item = Item([],phrase,[[] for p in range(len(phrase))],[],[],(phrases[i],pos[i]))
+        new_item = Item([], phrase, [[] for p in range(len(phrase))], [], [], (phrases[i], pos[i]))
         queue = [new_item]
 
         while queue:
@@ -258,37 +258,37 @@ def derive_labels(dags,phrases,pos):
                     red_item = reduce_item(item)
 
                     if left_item is not None:
-                        if check_dag(dag,left_item.dag):
+                        if check_dag(dag, left_item.dag):
                             queue_item.append(left_item)
                     if right_item is not None:
-                        if check_dag(dag,right_item.dag):
+                        if check_dag(dag, right_item.dag):
                             queue_item.append(right_item)
 
-                    # if check_dag(dag,red_item.dag):
+                    # if check_dag(dag, red_item.dag):
                     if red_item is not None:
                         queue_item.append(red_item)
-                    # queue_item = [left_item,right_item,red_item]
+                    # queue_item = [left_item, right_item, red_item]
                     queue = queue_item + queue
         if sequence is not None:
             sequences += sequence
             features += feature[:-1]
-    return zip(features,sequences)
+    return zip(features, sequences)
 
-def batch_shift_reduce(sentences,pos,weights,size):
+def batch_shift_reduce(sentences, pos, weights, size):
     result = []
     for s in range(len(sentences)):
         sentence = sentences[s]
         p = pos[s]
-        result.append(shift_reduce(sentence,p,weights,size))
+        result.append(shift_reduce(sentence, p, weights, size))
     return result
 
-def compute_error(dags,gold):
+def compute_error(dags, gold):
     error = 0
     total = 0
     for i in range(len(dags)):
         dag = dags[i].dag
         g = gold[i]
-        # print i,len(dag),len(g)
+        # print i, len(dag), len(g)
         if dag != gold:
             error += 1.0
         if len(dag) == len(g) and False:
@@ -308,21 +308,22 @@ def compute_error(dags,gold):
 
 if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    questions = json.load(open(path+"data\\free917.train.examples.canonicalized.json"),object_hook=object_decoder)[:100]
+    questions = json.load(open(path+"data\\free917.train.examples.canonicalized.json"), object_hook=object_decoder)[:100]
     labels = pickle.load(open(path+"data\\labels_trn_100.pickle"))
     labs = pickle.load(open(path+"data\\questions_trn_100.pickle"))
     dags = pickle.load(open(path+"annotate\\dags_100.pickle"))
     pos_tagged = pickle.load(open(path + "data\\pos_tagged.pickle"))
     i = 10
-    phr = examples_to_phrases(labels,questions)
-    phrases,pos = parse_phrases(questions,labs,pos_tagged)
-    # phrases,pos = parse_to_phrases(questions,phr,pos_tagged)
-    # dags = parse_dags(phrases)
-    # examples = derive_labels(dags,phrases,pos)
+    phr = examples_to_phrases(labels, questions)
+    phrases, pos = parse_phrases(questions, labs, pos_tagged)
+    phrases, pos = parse_to_phrases(questions, phr, pos_tagged)
+    dags = parse_dags(phrases)
+    examples = derive_labels(dags, phrases, pos)
     c = 4
-    size = 30
+    size = 50
     e = 66
-    weights = pickle.load(open(path+"models\\w_dag_all.pickle")) # train(50,examples,init_weights(examples,{},c),c)
-    DAGs = batch_shift_reduce(phrases,pos,weights,size)
-    print compute_error(DAGs,dags)
-    # pickle.dump(weights,open(path+"   models\\w_dag_all.pickle","wb"))
+    weights = pickle.load(open(path+"models\\w_dag100_i100.pickle"))
+    # weights = train(100, examples, init_weights(examples, {}, c), c)
+    DAGs = batch_shift_reduce(phrases, pos, weights, size)
+    print compute_error(DAGs, dags)
+    # pickle.dump(weights, open(path+"models\\w_dag100_i100.pickle", "wb"))

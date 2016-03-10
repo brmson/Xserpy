@@ -1,25 +1,25 @@
-import json,pickle,random
-from annotate.annotator import object_decoder,parse_phrases,parse_dags
-from phrase_detector import train,compute_score
+import json, pickle, random
+from annotate.annotator import object_decoder, parse_phrases, parse_dags
+from phrase_detector import train, compute_score
 
 class Instance:
-    def __init__(self,sentence,candidates,dependencies,label):
+    def __init__(self, sentence, candidates, dependencies, label):
         self.sentence = sentence
         self.candidates = candidates
         self.dependencies = dependencies
         self.label = label
 
-def score(buff,weights,cl):
+def score(buff, weights, cl):
     result = []
     for b in buff:
-        sc = compute_score(b,weights,0)
+        sc = compute_score(b, weights, 0)
         result.append(sc)
-    res = zip(buff,result)
-    res.sort(key=lambda x: x[1], reverse=True)
+    res = zip(buff, result)
+    res.sort(key=lambda x: x[1],  reverse=True)
     result = [r[0] for r in res]
     return result
 
-def beam_search(instance,size,dependency_labels,weights,training=True):
+def beam_search(instance, size, dependency_labels, weights, training=True):
     beam = [[]]
     for i in range(len(instance.sentence)):
         buff = []
@@ -28,7 +28,7 @@ def beam_search(instance,size,dependency_labels,weights,training=True):
             for p in instance.candidates:
                 buff.append(z + [p])
         random.shuffle(buff)
-        beam = score(buff,weights,len(instance.candidates))[:size]
+        beam = score(buff, weights, len(instance.candidates))[:size]
         index = i*(len(instance.sentence)+1)
         label = instance.label[index]
         if label not in [b[-1] for b in beam] and training:
@@ -44,20 +44,20 @@ def beam_search(instance,size,dependency_labels,weights,training=True):
                 # else:
                 #     buff.append(z + ['x'])
             random.shuffle(buff)
-            beam = score(buff,weights,len(dependency_labels))[:size]
+            beam = score(buff, weights, len(dependency_labels))[:size]
             label = instance.label[index+1:index+c+3]
             if label not in beam  and training:
                 return beam[0]
 
     return beam[0]
 
-def train_with_beam(n_iter,examples,weights,size,dependency_labels,features):
+def train_with_beam(n_iter, examples, weights, size, dependency_labels, features):
     learning_rate = 1
     for i in range(n_iter):
         err = 0
         for instance in examples:
             true = instance.label
-            guess = beam_search(instance,size,['x']+dependency_labels,weights)
+            guess = beam_search(instance, size, ['x']+dependency_labels, weights)
 
             if guess != true:
                 for j in range(len(guess)):
@@ -72,7 +72,7 @@ def train_with_beam(n_iter,examples,weights,size,dependency_labels,features):
     return weights
 
 def get_entity(tF):
-    letter = [0,0]
+    letter = [0, 0]
     j = 0
     i = 0
     strings = []
@@ -100,17 +100,17 @@ def get_entity(tF):
                     i += 1
             temp += tF[i]
             i += 1
-    return strings,temp
+    return strings, temp
 
 def get_db_entities(questions):
     simple = []
     result = []
     for q in questions:
-        strings, temp = get_entity(q.targetFormula)
+        strings,  temp = get_entity(q.targetFormula)
         result.append(strings)
         if len(temp) == 8:
             simple.append(q)
-    return (result,simple)
+    return (result, simple)
 
 def get_entities_relations(entities):
     all = [item for sublist in entities for item in sublist]
@@ -121,7 +121,7 @@ def get_entities_relations(entities):
             entities.append(a)
         else:
             relations.append(a)
-    return list(set(relations)),list(set(entities))
+    return list(set(relations)), list(set(entities))
 
 def get_surface_names(entities):
     result = {}
@@ -134,10 +134,10 @@ def get_surface_names(entities):
                 continue
             surf += W + " "
         result[e] = surf[:-1]
-    # pickle.dump(result,open("entities_100.pickle","w"))
+    # pickle.dump(result, open("entities_100.pickle", "w"))
     return result
 
-def gold_standard(phrases,dags,entities):
+def gold_standard(phrases, dags, entities):
     result = []
     for i in range(len(entities)):
         phrase = phrases[i]
@@ -172,15 +172,15 @@ def gold_standard(phrases,dags,entities):
         result.append(res)
     return result
 
-def create_features(questions,phrases):
+def create_features(questions, phrases):
     phr = list(set([p[0].lower().strip() for sublist in phrases for p in sublist]))
-    rel_entities,simple = get_db_entities(questions)
-    relations,entities = get_entities_relations(rel_entities)
+    rel_entities, simple = get_db_entities(questions)
+    relations, entities = get_entities_relations(rel_entities)
     surf_names = get_surface_names(entities)
     e_features = {}
     r_features = {}
     for entity in entities:
-        feature = construct_feature(phr,entity,surf_names)
+        feature = construct_feature(phr, entity, surf_names)
         # e_features.append(feature)
         e_features[entity] = feature
     e_features['x'] = []
@@ -189,7 +189,7 @@ def create_features(questions,phrases):
     # r_features['x'] = []
     return e_features # + r_features
 
-def construct_feature(phr,entity,surf_names):
+def construct_feature(phr, entity, surf_names):
     feature = []
     name = entity.split('.')[-1]
     for ph in phr:
@@ -202,20 +202,20 @@ def construct_feature(phr,entity,surf_names):
             feature.append("suf_"+name+"_"+ph)
         elif ph in s:
             feature.append("in_"+name+"_"+ph)
-        overlap = len(s) - len(s.replace(ph,''))
+        overlap = len(s) - len(s.replace(ph, ''))
         if overlap > 0:
             feature.append("over_"+name+"_"+ph+"_"+str(overlap))
     return feature
 
-def create_examples(questions,phrases,dags):
+def create_examples(questions, phrases, dags):
     gold = pickle.load(open('query_int_20.pickle'))
-    e_features = create_features(questions,phrases)
+    e_features = create_features(questions, phrases)
     instances = []
     for i in range(len(questions)):
-        instances.append(Instance(phrases[i],generate_candidates(questions[i],e_features),dags[i],gold[i]))
-    return instances,e_features
+        instances.append(Instance(phrases[i], generate_candidates(questions[i], e_features), dags[i], gold[i]))
+    return instances, e_features
 
-def init_weights(features,weights):
+def init_weights(features, weights):
     for k in features.keys():
 
         for f in features[k]:
@@ -227,13 +227,13 @@ def init_weights(features,weights):
 
     return weights
 
-def generate_candidates(question,features):
-    strings,temp = get_entity(question.targetFormula)
+def generate_candidates(question, features):
+    strings, temp = get_entity(question.targetFormula)
     candidates = features.keys()[:]
     for s in strings:
         candidates.remove(s)
     if len(candidates) >= len(strings):
-        indices = random.sample(xrange(len(candidates)),len(strings))
+        indices = random.sample(xrange(len(candidates)), len(strings))
         for i in indices:
             strings.append(candidates[i])
     # strings.append('x')
@@ -243,17 +243,17 @@ if __name__ == "__main__":
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\free917.train.examples.canonicalized.json"
     start = 30
     end = 40
-    questions = json.load(open(path),object_hook=object_decoder)[start:end]
+    questions = json.load(open(path), object_hook=object_decoder)[start:end]
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
     labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))[start:end]
-    phrases = parse_phrases(questions,labels)
+    phrases = parse_phrases(questions, labels)
     dags = parse_dags(phrases)
-    examples,features = create_examples(questions,phrases,dags)
-    rel_entities,simple = get_db_entities(questions)
-    # pickle.dump(simple,open("simple_questions.pickle","wb"))
-    relations,entities = get_entities_relations(rel_entities)
-    # W = train_with_beam(50,examples,init_weights(features,{}),10,relations,features)
-    # features = create_features(questions,phrases)
+    examples, features = create_examples(questions, phrases, dags)
+    rel_entities, simple = get_db_entities(questions)
+    # pickle.dump(simple, open("simple_questions.pickle", "wb"))
+    relations, entities = get_entities_relations(rel_entities)
+    # W = train_with_beam(50, examples, init_weights(features, {}), 10, relations, features)
+    # features = create_features(questions, phrases)
     # surf_names = get_surface_names(entities)
-    gold = gold_standard(phrases,dags,rel_entities)
-    pickle.dump(gold,open('query_gold_'+str(start)+'_'+str(end)+'.pickle','wb'))
+    gold = gold_standard(phrases, dags, rel_entities)
+    pickle.dump(gold, open('query_gold_'+str(start)+'_'+str(end)+'.pickle', 'wb'))
