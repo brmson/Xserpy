@@ -31,12 +31,9 @@ def ner_tag(questions):
     tagged = []
     i = 0
     for q in questions:
-        print i
-        start = time.time()
         text = nltk.word_tokenize(q.utterance)
         tagged.append(st_ner.tag(text))
         i += 1
-        print(time.time()-start)
     return tagged
 
 def pos_tag(questions):
@@ -65,7 +62,6 @@ def label_phrases(questions, pos_tagged, ner_tagged, weights):
     for i in range(len(questions)):
         l = 4
         question = questions[i]
-        # print question.utterance
         u = ["", ""]+question.utterance.split()+["", ""]
         p = ['', '']+[pp[1] for pp in pos_tagged[i]]+['', '']
         n = ['', '']+[nn[1] for nn in ner_tagged[i]]+['', '']
@@ -74,8 +70,6 @@ def label_phrases(questions, pos_tagged, ner_tagged, weights):
             l = predict(weights, f, 5)
             features.append(f)
             labels.append(l)
-            # print u[j], l, 
-        # print '\n'
     return (features, labels)
 
 def create_features(questions, pos_tagged, ner_tagged, path):
@@ -98,15 +92,24 @@ def load_questions(fpath):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Construct features for phrase detection")
-    parser.add_argument("fpath", help="filepath", type=str)
-    parser.add_argument("start", help="start", type=int, default=0)
+    parser.add_argument("fpath", help="Path to files pos_tagged.pickle,ner_tagged.pickle,json dataset of questions and pickled labels of all words", type=str)
+    parser.add_argument("size", help="Number of questions to construct features for", type=int, default=0)
+    parser.add_argument("type", help="Operation performed,p = POS tagging,n = NER tagging,i = construct features", type=str, default=0)
     args = parser.parse_args()
-    questions = load_questions(args.fpath)
-    path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    pos_tagged = pickle.load(open(path + "data\\pos_tagged.pickle"))
-    ner_tagged = pickle.load(open(path + "data\\ner_tagged.pickle"))
-    size = 100
-    # weights = pickle.load(open(path+"models\\w_90_50.pickle"))
-    c = create_features(questions[:size], pos_tagged, ner_tagged, path+"data\\questions_trn_"+str(size)+".pickle")
-    # labelled = label_phrases(questions[90:180], pos_tagged, ner_tagged, weights)
-    pickle.dump(c, open("phrase_detect_features_"+str(size)+"_arr.pickle", "wb"))
+
+    path = args.fpath
+    questions = load_questions(args.fpath + "free917.train.examples.canonicalized.json")
+    char = args.type.lower()
+
+    if 'p' in char:
+        pickle.dump(pos_tag(questions),open("pos_tagged.pickle","wb"))
+
+    if 'n' in char:
+        pickle.dump(ner_tag(questions),open("ner_tagged.pickle","wb"))
+
+    if 'i' in char:
+        pos_tagged = pickle.load(open(path + "pos_tagged.pickle"))
+        ner_tagged = pickle.load(open(path + "ner_tagged.pickle"))
+        size = args.size
+        c = create_features(questions[:size], pos_tagged, ner_tagged, path+"questions_trn_"+str(size)+".pickle")
+        pickle.dump(c, open("phrase_detect_features_"+str(size)+"_arr.pickle", "wb"))
