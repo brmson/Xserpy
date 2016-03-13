@@ -5,19 +5,28 @@ def convert_to_queries(dag, phrase):
     dag[0] = '?x'
     for d in range(1, len(dag)):
         dag[d] = ':' + dag[d]
+    Q = ''
     for i in range(len(phrase)):
         query = ""
-        index = i*len(phrase)
+        index = i*(len(phrase)+1)
         edges = dag[index+1:index+len(phrase)+1]
         for j in range(len(edges)):
-            k = j*len(phrase)
+            k = j*(len(phrase)+1)
             if edges[j] != ':x':
                 if edges[j] == ':SP':
-                    pass
+                    if len(Q) == 0:
+                        Q = dag[index] + " " + dag[k]
+                    else:
+                        Q = dag[index] + " " + Q
+                        query = Q
                 elif edges[j] == ':PO':
-                    pass
+                    if len(Q) == 0:
+                        Q = dag[k] + " " + dag[index]
+                    else:
+                        Q = Q + " " + dag[k]
+                        query = Q
                 elif edges[j] == ':SC':
-                    query = dag[index]+" object.type "+dag[k]
+                    query = dag[index]+" :object.type "+dag[k]
                 else:
                     query = dag[index] + " " + edges[j] + " " + dag[k]
         if len(query) > 0:
@@ -30,7 +39,7 @@ def create_query_file(filename, queries):
     f.write("PREFIX : <http://rdf.basekb.com/ns/>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\nSELECT ?name {\n")
     for q in queries:
         f.write(q + ' . \n')
-    f.write('?year rdfs:label ?name .\nFILTER (lang(?name)= \'en\')\n}\n')
+    f.write('?x rdfs:label ?name .\nFILTER (lang(?name)= \'en\')\n}\n')
     f.close()
 
 if __name__ == "__main__":
@@ -39,4 +48,4 @@ if __name__ == "__main__":
     q = []
     for d, p in zip(dags, phrases):
         q.append(convert_to_queries(d, p))
-    create_query_file("test_query.txt", q[15])
+    create_query_file("test_query.txt", q[13])
