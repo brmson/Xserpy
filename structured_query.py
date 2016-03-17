@@ -15,13 +15,13 @@ def convert_to_queries(dag, phrase):
             if edges[j] != ':x':
                 if edges[j] == ':SP':
                     if len(Q) == 0:
-                        Q = dag[index] + " " + dag[k]
+                        Q = dag[k] + " " + dag[index]
                     else:
                         Q = dag[index] + " " + Q
                         query = Q
                 elif edges[j] == ':PO':
                     if len(Q) == 0:
-                        Q = dag[k] + " " + dag[index]
+                        Q = dag[index] + " " + dag[k]
                     else:
                         Q = Q + " " + dag[k]
                         query = Q
@@ -48,4 +48,4 @@ if __name__ == "__main__":
     q = []
     for d, p in zip(dags, phrases):
         q.append(convert_to_queries(d, p))
-    create_query_file("test_query.txt", q[13])
+    create_query_file("test_query.txt", q[8])
