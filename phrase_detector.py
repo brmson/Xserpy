@@ -1,4 +1,4 @@
-import argparse, pickle, random
+import argparse, pickle, random,os
 from collections import defaultdict
 
 def compute_score(features, weights, index):
@@ -45,16 +45,23 @@ def train(n_iter,  examples, weights, cl):
     return weights
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Construct features for phrase detection")
-    parser.add_argument("fpath", help="filepath", type=str)
-    parser.add_argument("n_iter", help="iterations", type=int, default=0)
+    sep = os.path.sep
+
+    parser = argparse.ArgumentParser(description="Train weights for detecting phrases")
+    parser.add_argument("fpath", help="Path to features and labels (array format)", type=str)
+    parser.add_argument("n_iter", help="Number of iterations for training", type=int, default=0)
+    parser.add_argument("size", help="Size of dataset", type=int, default=0)
+    parser.add_argument("type", help="How examples are loaded", type=str)
     args = parser.parse_args()
-    path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    words = pickle.load(open(path+"annotate\\phrase_detect_features_40_arr.pickle"))
-    labels = pickle.load(open(path+"data\\labels_trn_40.pickle"))
-    # print len(words), len(labels)
-    # n = len(words[0])
-    # examples = zip(words, labels)
-    examples = pickle.load(open(path+"data\\all_examples.pickle"))
+    path = args.fpath
+
+    if 'l' in args.type:
+        words = pickle.load(open(path+"annotate" + sep + "phrase_detect_features_" + str(args.size) + "_arr.pickle"))
+        labels = pickle.load(open(path+"data" + sep + "labels_trn_" + str(args.size) + ".pickle"))
+        examples = zip(words, labels)
+        pickle.dump(examples,open("examples_" + str(args.size) + ".pickle","wb"))
+    else:
+        examples = pickle.load(open(path+"data" + sep + "all_examples.pickle"))
+
     w = train(args.n_iter, examples, init_weights(examples, {}, 5), 5)
-    pickle.dump(w, open(path+"models\\w_all_"+str(args.n_iter)+".pickle", "wb"))
+    pickle.dump(w, open(path+"models\\w_" + str(args.size) + "_"+str(args.n_iter)+".pickle", "wb"))

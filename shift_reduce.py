@@ -1,6 +1,6 @@
 from annotate.annotator import Question, object_decoder, json, examples_to_phrases, parse_dags
 from phrase_detector import train, predict, init_weights, compute_score
-import pickle, time
+import pickle, time, os, argparse
 
 class Item(object):
     def __init__(self, stack, queue, dag, sequence, features, data):
@@ -98,7 +98,7 @@ def arcright(item):
 def shift_reduce(sentence, pos, weights, size):
     actions = [shift, reduce_item, arcleft, arcright]
     deque = []
-    start_item = type('TestItem',  (),  {})() # Item([], sentence, False, [], [], [])
+    start_item = type('TestItem',  (),  {})()
     start_item.queue = range(len(sentence))
     start_item.stack = []
     start_item.dag = [[] for sen in range(len(sentence))]
@@ -182,7 +182,6 @@ def parse_phrases(questions, labels, pos):
                     del order[n]
                 n += 1
             m += 1
-        # phrases.append(zip(phrase, order))
         phrases.append(phrase)
         pos_tag.append(pos_t)
     return phrases, pos_tag
@@ -264,10 +263,8 @@ def derive_labels(dags, phrases, pos):
                         if check_dag(dag, right_item.dag):
                             queue_item.append(right_item)
 
-                    # if check_dag(dag, red_item.dag):
                     if red_item is not None:
                         queue_item.append(red_item)
-                    # queue_item = [left_item, right_item, red_item]
                     queue = queue_item + queue
         if sequence is not None:
             sequences += sequence
@@ -289,41 +286,48 @@ def compute_error(dags, gold):
         dag = dags[i].dag
         g = gold[i]
         # print i, len(dag), len(g)
-        if dag != gold:
-            error += 1.0
-        if len(dag) == len(g) and False:
-            D = 0
+
+        if len(dag) == len(g):
+            # D = 0
             for j in range(len(dag)):
                 a = dag[j]
                 b = g[j]
                 d = list(set(a).difference(b))+list(set(b).difference(a))
-                if len(d) > 0:
-                    D = 1.0
-            error += D
-                # error += float(len(d))
-                # total += len(dag)
-
-    return error/len(dags)
+            #     if len(d) > 0:
+            #         D = 1.0
+            # error += D
+                error += float(len(d))
+                total += len(dag)
+    print error, total
+    return error/total
 
 
 if __name__ == "__main__":
-    path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    questions = json.load(open(path+"data\\free917.train.examples.canonicalized.json"), object_hook=object_decoder)[:100]
-    labels = pickle.load(open(path+"data\\labels_trn_100.pickle"))
-    labs = pickle.load(open(path+"data\\questions_trn_100.pickle"))
-    dags = pickle.load(open(path+"annotate\\dags_100.pickle"))
-    pos_tagged = pickle.load(open(path + "data\\pos_tagged.pickle"))
-    i = 10
-    phr = examples_to_phrases(labels, questions)
-    phrases, pos = parse_phrases(questions, labs, pos_tagged)
-    phrases, pos = parse_to_phrases(questions, phr, pos_tagged)
-    dags = parse_dags(phrases)
-    examples = derive_labels(dags, phrases, pos)
+    sep = os.path.sep
+
+    parser = argparse.ArgumentParser(description="Train weights for DAG detection")
+    parser.add_argument("fpath", help="Path to features and labels (array format)", type=str)
+    parser.add_argument("n_iter", help="Number of iterations for training", type=int, default=0)
+    parser.add_argument("size", help="Size of dataset", type=int, default=0)
+    parser.add_argument("type", help="How examples are loaded", type=str)
+    args = parser.parse_args()
+    path = args.fpath
+
+    questions = json.load(open(path+"data" + sep + "free917.train.examples.canonicalized.json"), object_hook=object_decoder)[:100]
+    labels = pickle.load(open(path+"data" + sep + "labels_trn_100.pickle"))
+    labs = pickle.load(open(path+"data" + sep + "questions_trn_100.pickle"))
+    dags = pickle.load(open(path+"annotate" + sep + "dags_100.pickle"))
+    pos_tagged = pickle.load(open(path + "data" + sep + "pos_tagged.pickle"))
+
+    if 'c' in args.type:
+        phr = examples_to_phrases(labels, questions)
+        phrases, pos = parse_phrases(questions, labs, pos_tagged)
+        phrases, pos = parse_to_phrases(questions, phr, pos_tagged)
+        dags = parse_dags(phrases)
+        examples = derive_labels(dags, phrases, pos)
+    else:
+        examples = pickle.load(open(""))
     c = 4
-    size = 50
-    e = 66
-    weights = pickle.load(open(path+"models\\w_dag100_i100.pickle"))
-    # weights = train(100, examples, init_weights(examples, {}, c), c)
-    DAGs = batch_shift_reduce(phrases, pos, weights, size)
-    print compute_error(DAGs, dags)
-    # pickle.dump(weights, open(path+"models\\w_dag100_i100.pickle", "wb"))
+    size = args.size
+    weights = train(args.n_iter, examples, init_weights(examples, {}, c), c)
+    pickle.dump(weights, open(path+"models" + sep + "w_dag" + size + "_i" + args.n_iter + ".pickle", "wb"))
