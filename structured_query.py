@@ -1,10 +1,12 @@
 import pickle
 
 def convert_to_queries(dag, phrase):
-    queries = []
+    # queries = []
     dag[0] = '?x'
-    for d in range(1, len(dag)):
-        dag[d] = ':' + dag[d]
+    queries = get_entity_names(dag)
+    for d in range(len(dag)):
+        if '?' not in dag[d]:
+            dag[d] = ':' + dag[d]
     Q = ''
     for i in range(len(phrase)):
         query = ""
@@ -46,8 +48,21 @@ def create_query_file(filename, queries,phr):
     f.write('?x rdfs:label ?name .\nFILTER (lang(?name)= \'en\')\n}\n')
     f.close()
 
+def get_entity_names(dag):
+    alphabet = ['?a','?b','?c','?d','?e','?f','?g','?h','?i']
+    index = 0
+    result = []
+    for i in range(len(dag)):
+        d = dag[i]
+        if d != 'x':
+            if d[:2] == 'en':
+                dag[i] = alphabet[index]
+                result.append(alphabet[index]+" rdfs:label \""+d[3:].replace('_',' ').title()+"\"@en")
+                index += 1
+    return result
+
 if __name__ == "__main__":
-    dags = pickle.load(open("query_int_20.pickle"))
+    dags = pickle.load(open("query_int_40.pickle"))
     phrases = pickle.load(open("annotate\\dags_100.pickle"))
     phr = pickle.load(open("phrases_100.pickle"))
     q = []
