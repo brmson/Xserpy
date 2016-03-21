@@ -330,4 +330,4 @@ if __name__ == "__main__":
     c = 4
     size = args.size
     weights = train(args.n_iter, examples, init_weights(examples, {}, c), c)
-    pickle.dump(weights, open(path+"models" + sep + "w_dag" + size + "_i" + args.n_iter + ".pickle", "wb"))
+    pickle.dump(weights, open(path+"models" + sep + "w_dag" + str(size) + "_i" + str(args.n_iter) + ".pickle", "wb"))

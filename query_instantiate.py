@@ -1,4 +1,4 @@
-import json, pickle, random
+import json, pickle, random,argparse,os
 from annotate.annotator import object_decoder, parse_phrases, parse_dags
 from phrase_detector import train, compute_score
 
@@ -115,7 +115,7 @@ def get_db_entities(questions):
 def get_entities_relations(entities):
     all = [item for sublist in entities for item in sublist]
     entities = []
-    relations = []
+    relations = ['SC','SP','PO']
     for a in all:
         if a[:3] == 'en.':
             entities.append(a)
@@ -207,8 +207,8 @@ def construct_feature(phr, entity, surf_names):
             feature.append("over_"+name+"_"+ph+"_"+str(overlap))
     return feature
 
-def create_examples(questions, phrases, dags):
-    gold = pickle.load(open('query_int_20.pickle'))
+def create_examples(questions, phrases, dags,goldname):
+    gold = pickle.load(open(goldname))
     e_features = create_features(questions, phrases)
     instances = []
     for i in range(len(questions)):
@@ -236,24 +236,37 @@ def generate_candidates(question, features):
         indices = random.sample(xrange(len(candidates)), len(strings))
         for i in indices:
             strings.append(candidates[i])
-    # strings.append('x')
     return strings
 
 if __name__ == "__main__":
-    path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\data\\free917.train.examples.canonicalized.json"
-    start = 30
-    end = 40
-    questions = json.load(open(path), object_hook=object_decoder)[start:end]
-    path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    labels = pickle.load(open(path+"data\\questions_trn_100.pickle"))[start:end]
+    sep = os.path.sep
+
+    parser = argparse.ArgumentParser(description="Train weights for detecting query intention or create gold standard")
+    parser.add_argument("fpath", help="filepath", type=str)
+    parser.add_argument("start", help="start", type=int, default=0)
+    parser.add_argument("end", help="end", type=int, default=0)
+    parser.add_argument("n_iter", help="Number of iterations", type=int, default=0)
+    parser.add_argument("size", help="Beam size", type=int, default=0)
+    parser.add_argument("type", help="type", type=str)
+    parser.add_argument("gold", help="goldname", type=str)
+    args = parser.parse_args()
+
+    path = args.fpath
+    start = args.start
+    end = args.end
+    goldname = args.gold
+
+    questions = json.load(open(path+"free917.train.examples.canonicalized.json"), object_hook=object_decoder)[start:end]
+    labels = pickle.load(open(path+"data" + sep + "questions_trn_100.pickle"))[start:end]
     phrases = parse_phrases(questions, labels)
     dags = parse_dags(phrases)
-    examples, features = create_examples(questions, phrases, dags)
     rel_entities, simple = get_db_entities(questions)
-    # pickle.dump(simple, open("simple_questions.pickle", "wb"))
-    relations, entities = get_entities_relations(rel_entities)
-    # W = train_with_beam(50, examples, init_weights(features, {}), 10, relations, features)
-    # features = create_features(questions, phrases)
-    # surf_names = get_surface_names(entities)
-    gold = gold_standard(phrases, dags, rel_entities)
-    pickle.dump(gold, open('query_gold_'+str(start)+'_'+str(end)+'.pickle', 'wb'))
+
+    if 't' in args.type:
+        relations, entities = get_entities_relations(rel_entities)
+        examples, features = create_examples(questions, phrases, dags,goldname)
+        W = train_with_beam(args.n_iter, examples, init_weights(features, {}), args.size, relations, features)
+        pickle.dump(W, open(path+"models" + sep + "w_qint_" + str(args.size) + "_i" + str(args.n_iter) + ".pickle", "wb"))
+    else:
+        gold = gold_standard(phrases, dags, rel_entities)
+        pickle.dump(gold, open('query_gold_'+str(start)+'_'+str(end)+'.pickle', 'wb'))
