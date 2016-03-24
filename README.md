@@ -21,3 +21,6 @@ To retrain the model, you need to regenerate the data files as listed below.
   * **shift_reduce** - generate a parse DAG from classified tokens
   * **query_instantiate** - label the DAG edges and nodes to correspond to a logical form (objects, predicates, relation names)
   * **structured_query** - convert the DAG to a SPARQL query
+
+ ## Credits
+  * **https://github.com/pks/rebol** - for answers for Free917 questions
