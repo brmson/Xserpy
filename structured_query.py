@@ -19,7 +19,7 @@ def convert_to_queries(dag, phrase):
                     if len(Q) == 0:
                         Q = dag[k] + " " + dag[index]
                     else:
-                        Q = dag[index] + " " + Q
+                        Q = dag[k] + " " + Q
                         query = Q
                 elif edges[j] == ':PO':
                     if len(Q) == 0:
@@ -28,7 +28,9 @@ def convert_to_queries(dag, phrase):
                         Q = Q + " " + dag[k]
                         query = Q
                 elif edges[j] == ':SC':
-                    query = dag[index]+" :object.type "+dag[k]
+                    # query = dag[index]+" :type.object.type "+dag[k]
+                    query = dag[k] + " " + dag[index] + " ?cvt"
+                    dag[0] = "?cvt"
                 else:
                     query = dag[index] + " " + edges[j] + " " + dag[k]
         if len(query) > 0:
@@ -39,13 +41,18 @@ def create_query_file(filename, queries,phr):
     i = 0
     f = open(filename, "w")
     f.write("PREFIX : <http://rdf.freebase.com/ns/>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n")
-    if ('how many',3) in phr:
-        f.write("SELECT count(?name) {\n")
+    select = "?x"
+    if ('when ',3) not in phr:
+        queries.append('?x rdfs:label ?name .\nFILTER (lang(?name) = \'en\')\n')
+        select = "?name"
+    if ('how many ',3) in phr:
+        f.write("SELECT count(" + select + ") {\n")
     else:
-        f.write("SELECT ?name {\n")
+        f.write("SELECT " + select + " {\n")
     for q in queries:
         f.write(q + ' . \n')
-    f.write('?x rdfs:label ?name .\nFILTER (lang(?name)= \'en\')\n}\n')
+
+    f.write('}\n')
     f.close()
 
 def get_entity_names(dag):
@@ -65,8 +72,11 @@ if __name__ == "__main__":
     dags = pickle.load(open("query_int_40.pickle"))
     phrases = pickle.load(open("annotate\\dags_100.pickle"))
     phr = pickle.load(open("phrases_100.pickle"))
+
+    i = 35
     q = []
-    for d, p in zip(dags, phrases):
+    for d, p in zip(dags[i:i+1], phrases[i:i+1]):
         q.append(convert_to_queries(d, p))
-    i = 8
-    create_query_file("test_query.txt", q[i],phr[i])
+    ph = phr[i]
+    i = 0
+    create_query_file("test_query.txt", q[i],ph)
