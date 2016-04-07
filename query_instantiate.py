@@ -68,7 +68,7 @@ def train_with_beam(n_iter, examples, weights, size, dependency_labels, features
                 err += 1.0
 
         random.shuffle(examples)
-    print err/len(examples)
+        print err/len(examples)
     return weights
 
 def get_entity(tF):
@@ -117,7 +117,7 @@ def get_entities_relations(entities):
     entities = []
     relations = ['SC','SP','PO']
     for a in all:
-        if a[:3] == 'en.':
+        if a[:3] == 'en.' or a[:2] == 'm.':
             entities.append(a)
         else:
             relations.append(a)
@@ -173,6 +173,7 @@ def gold_standard(phrases, dags, entities):
     return result
 
 def create_features(questions, phrases):
+    scores = pickle.load(open("scores_trn_100.pickle"))
     phr = list(set([p[0].lower().strip() for sublist in phrases for p in sublist]))
     rel_entities, simple = get_db_entities(questions)
     relations, entities = get_entities_relations(rel_entities)
@@ -180,7 +181,7 @@ def create_features(questions, phrases):
     e_features = {}
     r_features = {}
     for entity in entities:
-        feature = construct_feature(phr, entity, surf_names)
+        feature = construct_feature(phr, entity, surf_names,scores)
         # e_features.append(feature)
         e_features[entity] = feature
     e_features['x'] = []
@@ -189,7 +190,7 @@ def create_features(questions, phrases):
     # r_features['x'] = []
     return e_features # + r_features
 
-def construct_feature(phr, entity, surf_names):
+def construct_feature(phr, entity, surf_names, scores):
     feature = []
     name = entity.split('.')[-1]
     for ph in phr:
@@ -205,13 +206,15 @@ def construct_feature(phr, entity, surf_names):
         overlap = len(s) - len(s.replace(ph, ''))
         if overlap > 0:
             feature.append("over_"+name+"_"+ph+"_"+str(overlap))
+        if entity in scores.keys():
+            feature.append('pop_score_'+str(scores[entity]))
     return feature
 
-def create_examples(questions, phrases, dags,goldname):
+def create_examples(questions, phrases, dags, goldname):
     gold = pickle.load(open(goldname))
     e_features = create_features(questions, phrases)
     instances = []
-    for i in range(len(questions)):
+    for i in range(len(gold)):
         instances.append(Instance(phrases[i], generate_candidates(questions[i], e_features), dags[i], gold[i]))
     return instances, e_features
 
@@ -256,17 +259,28 @@ if __name__ == "__main__":
     end = args.end
     goldname = args.gold
 
-    questions = json.load(open(path+"free917.train.examples.canonicalized.json"), object_hook=object_decoder)[start:end]
-    labels = pickle.load(open(path+"data" + sep + "questions_trn_100.pickle"))[start:end]
+    questions = json.load(open(path+"data" + sep + "free917.train.examples.canonicalized.json"), object_hook=object_decoder)[:100]
+    labels = pickle.load(open(path +"data" + sep + "questions_trn_100.pickle"))
+
     phrases = parse_phrases(questions, labels)
-    dags = parse_dags(phrases)
-    rel_entities, simple = get_db_entities(questions)
+    # candidates = obtain_pop_score(phrases) # pickle.load(open("candidates_trn_100.pickle"))#
+    # pickle.dump(candidates,open("scores_trn_100.pickle","wb"))
 
     if 't' in args.type:
+        phrases = parse_phrases(questions, labels)
+        dags = parse_dags(phrases)
+        rel_entities, simple = get_db_entities(questions)
         relations, entities = get_entities_relations(rel_entities)
-        examples, features = create_examples(questions, phrases, dags,goldname)
-        W = train_with_beam(args.n_iter, examples, init_weights(features, {}), args.size, relations, features)
-        pickle.dump(W, open(path+"models" + sep + "w_qint_" + str(args.size) + "_i" + str(args.n_iter) + ".pickle", "wb"))
+        examples, features = create_examples(questions, phrases, dags, goldname)
+        # features = get_features(phrases, candidates)
+        # examples = obtain_examples(phrases, candidates, dags, goldname)
+        W = train_with_beam(args.n_iter, examples, init_weights(features, {}), args.size, ['SP','SC','PO','x'], features)
+        #pickle.dump(W, open(path+"models" + sep + "w_qint_" + str(args.size) + "_i" + str(args.n_iter) + "_ffs.pickle", "wb"))
     else:
+        questions = questions[start:end]
+        labels = labels[start:end]
+        phrases = parse_phrases(questions, labels)
+        dags = parse_dags(phrases)
+        rel_entities, simple = get_db_entities(questions)
         gold = gold_standard(phrases, dags, rel_entities)
         pickle.dump(gold, open('query_gold_'+str(start)+'_'+str(end)+'.pickle', 'wb'))
