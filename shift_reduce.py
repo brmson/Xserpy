@@ -136,56 +136,6 @@ def check_dag(gold, dag):
                 return False
     return True
 
-def parse_phrases(questions, labels, pos):
-    pos_tag = []
-    phrases = []
-    for i in range(len(questions)):
-        u = [q for q in questions[i].utterance.split()]
-        label = [l for l in labels[i]]
-        POS = [p[1] for p in pos[i]]
-        j = 0
-        while label[j] == 4:
-            j += 1
-        phrase = [u[j]+" "]
-        pos_t = [POS[j]+'_']
-        k = 0
-        order = [label[j]]
-        while j < len(label):
-            if j + 1 >= len(label):
-                break
-            if label[j+1] == label[j]:
-                phrase[k] += u[j+1] + " "
-                pos_t[k] += POS[j+1] + '_'
-                u.remove(u[j+1])
-                POS.remove(POS[j+1])
-                label.remove(label[j+1])
-            else:
-                j += 1
-                k += 1
-                while label[j] == 4:
-                    j += 1
-                phrase.append(u[j] + " ")
-                pos_t.append(POS[j] + "_")
-                order.append(label[j])
-        m = 0
-        while m < len(phrase):
-            if order[m] == 0:
-                m += 1
-                continue
-            n = m + 1
-            while n < len(phrase):
-                if order[m] == order[n]:
-                    phrase[m] += phrase[n]
-                    pos_t[m] += pos_t[n]
-                    del phrase[n]
-                    del pos_t[n]
-                    del order[n]
-                n += 1
-            m += 1
-        phrases.append(phrase)
-        pos_tag.append(pos_t)
-    return phrases, pos_tag
-
 def parse_to_phrases(questions, labels, pos_tagged):
     phrases = []
     pos_phrases = []
@@ -321,10 +271,10 @@ if __name__ == "__main__":
 
     if 'c' in args.type:
         phr = examples_to_phrases(labels, questions)
-        phrases, pos = parse_phrases(questions, labs, pos_tagged)
         phrases, pos = parse_to_phrases(questions, phr, pos_tagged)
         dags = parse_dags(phrases)
         examples = derive_labels(dags, phrases, pos)
+        pickle.dump(examples, open(path+'data' + sep + 'dag_examples.pickle', 'wb'))
     else:
         examples = pickle.load(open(""))
     c = 4
