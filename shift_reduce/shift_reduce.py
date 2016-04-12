@@ -1,6 +1,10 @@
-from annotate.annotator import Question, object_decoder, json, examples_to_phrases, parse_dags
-from phrase_detector import train, predict, init_weights, compute_score
-import pickle, time, os, argparse
+import pickle
+import os
+import argparse
+
+from annotate.annotator import object_decoder, json, examples_to_phrases, parse_dags
+from phrase_detection.phrase_detector import train, init_weights, compute_score
+
 
 class Item(object):
     def __init__(self, stack, queue, dag, sequence, features, data):
@@ -17,47 +21,47 @@ class Item(object):
         if stack:
             head = stack[-1]
             #
-            features.append("ST_p_"+pos[head][:-1])
-            features.append("ST_w_"+phrase[head][0])
-            features.append("ST_p_w_"+pos[head]+phrase[head][0])
+            features.append("ST_p."+pos[head][:-1])
+            features.append("ST_w."+phrase[head][0])
+            features.append("ST_p_w."+pos[head]+phrase[head][0])
         if queue:
             next = queue[0]
-            features.append("N0_p_"+pos[next][:-1])
-            features.append("N0_w_"+phrase[next][0])
-            features.append("N0_p_w_"+pos[next]+phrase[next][0])
+            features.append("N0_p."+pos[next][:-1])
+            features.append("N0_w."+phrase[next][0])
+            features.append("N0_p_w."+pos[next]+phrase[next][0])
 
-            features.append("N0_t_"+str(phrase[next][1]))
-            features.append("N0_t_p_"+str(phrase[next][1])+"_"+pos[next][:-1])
-            features.append("N0_t_w_"+str(phrase[next][1])+"_"+phrase[next][0])
+            features.append("N0_t."+str(phrase[next][1]))
+            features.append("N0_t_p."+str(phrase[next][1])+"_"+pos[next][:-1])
+            features.append("N0_t_w."+str(phrase[next][1])+"_"+phrase[next][0])
             if stack:
                 head = stack[-1]
-                features.append("ST_p_w_"+pos[head] + phrase[head][0]+"_"+"N0_p_w_"+pos[next] + phrase[next][0])
-                features.append("ST_p_w_"+pos[head] + phrase[head][0]+"_"+"N0_w_"+phrase[next][0])
+                features.append("ST_p_w_N0_p_w."+pos[head] + phrase[head][0]+"_"+pos[next] + phrase[next][0])
+                features.append("ST_p_w_N0_w_."+pos[head] + phrase[head][0]+"_"+phrase[next][0])
 
-                features.append("ST_t_"+str(phrase[head][1])+"_"+"N0_p_"+pos[next][:-1])
-                features.append("ST_w_"+phrase[head][0]+"_"+"N0_t_"+str(phrase[next][1]))
+                features.append("ST_t_N0_p."+str(phrase[head][1])+"_"+pos[next][:-1])
+                features.append("ST_w_N0_t."+phrase[head][0]+"_"+str(phrase[next][1]))
 
-                features.append("ST_p_"+pos[head]+"N0_p_"+pos[next][:-1])
-                features.append("ST_t_"+str(phrase[head][1])+"_"+"N0_t_"+str(phrase[next][1]))
+                features.append("ST_p_N0_p."+pos[head]+"_"+pos[next][:-1])
+                features.append("ST_t_N0_t."+str(phrase[head][1])+"_"+str(phrase[next][1]))
 
                 if head in dag[next]:
-                    features.append("AR_"+phrase[head][0]+"_"+phrase[next][0])
+                    features.append("AR."+phrase[head][0]+"_"+phrase[next][0])
                 if next in dag[head]:
-                    features.append("AL_"+phrase[next][0]+"_"+phrase[head][0])
+                    features.append("AL."+phrase[next][0]+"_"+phrase[head][0])
         if len(queue) > 1:
             next = queue[1]
-            features.append("N1_p_"+pos[next][:-1])
-            features.append("N1_w_"+phrase[next][0])
-            features.append("N1_p_w_"+pos[next]+phrase[next][0])
+            features.append("N1_p."+pos[next][:-1])
+            features.append("N1_w."+phrase[next][0])
+            features.append("N1_p_w."+pos[next]+phrase[next][0])
 
-            features.append("N1_t_"+str(phrase[next][1]))
-            features.append("N1_t_p_"+str(phrase[next][1])+"_"+pos[next][:-1])
-            features.append("N1_t_w_"+str(phrase[next][1])+"_"+phrase[next][0])
+            features.append("N1_t."+str(phrase[next][1]))
+            features.append("N1_t_p."+str(phrase[next][1])+"_"+pos[next][:-1])
+            features.append("N1_t_w."+str(phrase[next][1])+"_"+phrase[next][0])
 
-            features.append("N0_p_"+pos[queue[0]]+"N1_p_"+pos[next][:-1])
+            features.append("N0_p_N1_p."+pos[queue[0]]+"_"+pos[next][:-1])
             if len(queue) > 2:
-                features.append("N0_p_"+pos[queue[0]]+"N1_p_"+pos[next]+"N2_p_"+pos[queue[2]][:-1])
-                features.append("N0_w_"+str(phrase[queue[0]][1])+"N1_p_"+pos[next]+"N2_p_"+pos[queue[2]][:-1])
+                features.append("N0_p_N1_p_N2_p."+pos[queue[0]]+"_"+pos[next]+"_"+pos[queue[2]][:-1])
+                features.append("N0_t_N1_p_N2_p."+str(phrase[queue[0]][1])+"_"+pos[next]+"_"+pos[queue[2]][:-1])
         return features
 
 def shift(item):
@@ -217,6 +221,7 @@ def parse_to_phrases(questions, labels, pos_tagged):
 
 def derive_labels(dags, phrases, pos):
     sequences = []
+    seqs = []
     features = []
     # shift = 0
     # reduce = 1
@@ -267,9 +272,10 @@ def derive_labels(dags, phrases, pos):
                         queue_item.append(red_item)
                     queue = queue_item + queue
         if sequence is not None:
+            seqs.append(sequence)
             sequences += sequence
             features += feature[:-1]
-    return zip(features, sequences)
+    return zip(features, sequences),seqs
 
 def batch_shift_reduce(sentences, pos, weights, size):
     result = []
@@ -280,26 +286,43 @@ def batch_shift_reduce(sentences, pos, weights, size):
     return result
 
 def compute_error(dags, gold):
-    error = 0
+    correct = 0
     total = 0
+    noedge_err = 0
+    edge_err = 0
     for i in range(len(dags)):
         dag = dags[i].dag
         g = gold[i]
         # print i, len(dag), len(g)
-
         if len(dag) == len(g):
-            # D = 0
-            for j in range(len(dag)):
-                a = dag[j]
-                b = g[j]
-                d = list(set(a).difference(b))+list(set(b).difference(a))
-            #     if len(d) > 0:
-            #         D = 1.0
-            # error += D
-                error += float(len(d))
-                total += len(dag)
-    print error, total
-    return error/total
+            if dag == g:
+                correct += 1
+                total += len(dag)**2
+            else:
+                for j in range(len(dag)):
+                    dd = dag[j]
+                    gg = g[j]
+                    total += len(dag)
+                    for ddd in dd:
+                        if ddd not in gg:
+                            noedge_err += 1
+                    for ggg in gg:
+                        if ggg not in dd:
+                            edge_err += 1
+                # for j in range(len(dag)):
+                #     a = dag[j]
+                #     b = g[j]
+                #     d = list(set(a).difference(b))+list(set(b).difference(a))
+                #     if len(d) > 0:
+                #         D = 1.0
+                #         break
+                # correct += D
+                #     correct += float(len(d))
+                #     total += len(dag)
+
+    # total = len(gold)
+    # print correct, total
+    return noedge_err,edge_err,total,correct
 
 
 if __name__ == "__main__":
@@ -313,21 +336,30 @@ if __name__ == "__main__":
     args = parser.parse_args()
     path = args.fpath
 
-    questions = json.load(open(path+"data" + sep + "free917.train.examples.canonicalized.json"), object_hook=object_decoder)[:100]
-    labels = pickle.load(open(path+"data" + sep + "labels_trn_100.pickle"))
-    labs = pickle.load(open(path+"data" + sep + "questions_trn_100.pickle"))
+    questions = json.load(open(path+"data" + sep + "free917.test.examples.canonicalized.json"), object_hook=object_decoder)
+    labels = pickle.load(open(path+"data" + sep + "labels_tst_276.pickle"))
+    labs = pickle.load(open(path+"data" + sep + "questions_tst_276.pickle"))
     dags = pickle.load(open(path+"annotate" + sep + "dags_100.pickle"))
-    pos_tagged = pickle.load(open(path + "data" + sep + "pos_tagged.pickle"))
+    pos_tagged = pickle.load(open(path + "data" + sep + "pos_tagged_tst.pickle"))
 
     if 'c' in args.type:
         phr = examples_to_phrases(labels, questions)
-        phrases, pos = parse_phrases(questions, labs, pos_tagged)
+        # phrases, pos = parse_phrases(questions, labs, pos_tagged)
         phrases, pos = parse_to_phrases(questions, phr, pos_tagged)
-        dags = parse_dags(phrases)
-        examples = derive_labels(dags, phrases, pos)
+        DAGs = parse_dags(phrases)
+        examples,seqs = derive_labels(dags, phrases, pos)
+        pickle.dump(examples,open("dag_labs_tst_276.pickle","wb"))
+    elif 'b' in args.type:
+        weights = pickle.load(open(path + "models" + sep + "w_dag100_i100.pickle"))
+        labels = pickle.load(open("dag_labels_tst_276.pickle"))
+        phrases, pos = parse_phrases(questions, labs, pos_tagged)
+        d = batch_shift_reduce(phrases, pos, weights, 1000)
+        # pickle.dump(d,open("dags_tst_276.pickle","wb"))
+        # d = pickle.load(open("dags_tst_276.pickle"))
+        print compute_error(d,labels)
     else:
         examples = pickle.load(open(""))
-    c = 4
-    size = args.size
-    weights = train(args.n_iter, examples, init_weights(examples, {}, c), c)
-    pickle.dump(weights, open(path+"models" + sep + "w_dag" + str(size) + "_i" + str(args.n_iter) + ".pickle", "wb"))
+        c = 4
+        size = args.size
+        weights = train(args.n_iter, examples, init_weights(examples, {}, c), c)
+        pickle.dump(weights, open(path+"models" + sep + "w_dag" + str(size) + "_i" + str(args.n_iter) + ".pickle", "wb"))
