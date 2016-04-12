@@ -61,16 +61,19 @@ if __name__ == "__main__":
     parser.add_argument("n_iter", help="Number of iterations for training", type=int, default=0)
     parser.add_argument("size", help="Size of dataset", type=int, default=0)
     parser.add_argument("type", help="How examples are loaded", type=str)
+    parser.add_argument("mode", help="Training or testing mode, required values: trn or tst", type=str)
     args = parser.parse_args()
+
     path = args.fpath
+    mode = args.mode
 
     if 'l' in args.type:
-        words = pickle.load(open(path+"annotate" + sep + "phrase_detect_features_" + str(args.size) + "_arr.pickle"))
-        labels = pickle.load(open(path+"data" + sep + "labels_trn_" + str(args.size) + ".pickle"))
+        words = pickle.load(open(path + "data" + sep + "phrase_detect_features_" + mode + "_" + str(args.size) + "_arr.pickle"))
+        labels = pickle.load(open(path + "data" + sep + "labels_" + mode + "_" + str(args.size) + ".pickle"))
         examples = zip(words, labels)
-        pickle.dump(examples,open("examples_" + str(args.size) + ".pickle","wb"))
+        pickle.dump(examples,open(path + "data" + sep + "phr_detect_examples_" + mode + "_" + str(args.size) + ".pickle","wb"))
     else:
-        examples = pickle.load(open(path+"data" + sep + "examples_100.pickle"))
+        examples = pickle.load(open(path + "data" + sep + "phr_detect_examples_" + mode + "_" + str(args.size) + ".pickle"))
 
     w = train(args.n_iter, examples, init_weights(examples, {}, 5), 5)
-    pickle.dump(w, open(path+"models\\w_" + str(args.size) + "_"+str(args.n_iter)+".pickle", "wb"))
+    pickle.dump(w, open(path + "models" + sep + "w_" + str(args.size) + "_i" + str(args.n_iter) + ".pickle", "wb"))
