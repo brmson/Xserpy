@@ -1,6 +1,13 @@
-import os, argparse, json, pickle, nltk, time
+import os
+import argparse
+import json
+import pickle
+
+import nltk
 from nltk import StanfordNERTagger
-from phrase_detector import predict
+
+from phrase_detection.phrase_detector import predict
+
 
 class Question(object):
     def __init__(self,  utterance,  targetFormula):
@@ -101,18 +108,18 @@ if __name__ == "__main__":
     path = args.fpath + "data\\"
     mode = args.mode
 
-    questions = load_questions(args.fpath + "free917." + mode + ".examples.canonicalized.json")
+    questions = load_questions(path + "free917." + mode + ".examples.canonicalized.json")
     char = args.type.lower()
 
     if 'p' in char:
-        pickle.dump(pos_tag(questions),open("pos_tagged_" + mode + ".pickle","wb"))
+        pickle.dump(pos_tag(questions),open(path + "pos_tagged_" + mode + ".pickle","wb"))
 
     if 'n' in char:
-        pickle.dump(ner_tag(questions),open("ner_tagged_" + mode + ".pickle","wb"))
+        pickle.dump(ner_tag(questions),open(path + "ner_tagged_" + mode + ".pickle","wb"))
 
     if 'i' in char:
         pos_tagged = pickle.load(open(path + "pos_tagged_" + mode + ".pickle"))
         ner_tagged = pickle.load(open(path + "ner_tagged_" + mode + ".pickle"))
         size = args.size
-        c = create_features(questions[:size], pos_tagged, ner_tagged, path+"questions_" + mode + "_" + str(size) + ".pickle")
-        pickle.dump(c, open("phrase_detect_features_" + mode + "_"+str(size)+"_arr.pickle", "wb"))
+        features = create_features(questions, pos_tagged, ner_tagged, path+"questions_" + mode + "_" + str(size) + ".pickle")
+        pickle.dump(features, open(path + "phrase_detect_features_" + mode + "_"+str(size)+"_arr.pickle", "wb"))

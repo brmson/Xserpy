@@ -70,7 +70,7 @@ if __name__ == "__main__":
         examples = zip(words, labels)
         pickle.dump(examples,open("examples_" + str(args.size) + ".pickle","wb"))
     else:
-        examples = pickle.load(open(path+"data" + sep + "all_examples.pickle"))
+        examples = pickle.load(open(path+"data" + sep + "examples_100.pickle"))
 
     w = train(args.n_iter, examples, init_weights(examples, {}, 5), 5)
     pickle.dump(w, open(path+"models\\w_" + str(args.size) + "_"+str(args.n_iter)+".pickle", "wb"))
