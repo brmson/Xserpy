@@ -44,11 +44,11 @@ def train(n_iter,  examples, weights, cl):
         print err/len(examples)
     return weights
 
-def compute_error(features,labels,weights):
+def compute_error(features, labels, weights):
     error = 0
     for i in range(len(features)):
         label = labels[i]
-        guess = predict(weights,features[i],5)
+        guess = predict(weights, features[i],5)
         if guess != label:
             error += 1.0
     print error/len(features)

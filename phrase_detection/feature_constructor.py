@@ -2,7 +2,6 @@ import os
 import argparse
 import json
 import pickle
-
 import nltk
 from nltk import StanfordNERTagger
 
@@ -77,7 +76,7 @@ def label_phrases(questions, pos_tagged, ner_tagged, weights):
             l = predict(weights, f, 5)
             features.append(f)
             labels.append(l)
-    return (features, labels)
+    return features, labels
 
 def create_features(questions, pos_tagged, ner_tagged, path):
 
@@ -98,6 +97,7 @@ def load_questions(fpath):
     return json.load(open(fpath), object_hook=object_decoder)
 
 if __name__ == "__main__":
+    sep = os.path.sep
     parser = argparse.ArgumentParser(description="Construct features for phrase detection")
     parser.add_argument("fpath", help="Path to files pos_tagged.pickle,ner_tagged.pickle,json dataset of questions and pickled labels of all words", type=str)
     parser.add_argument("size", help="Number of questions to construct features for", type=int, default=0)
@@ -105,17 +105,17 @@ if __name__ == "__main__":
     parser.add_argument("mode", help="Training or testing mode, required values: trn or tst", type=str, default=0)
     args = parser.parse_args()
 
-    path = args.fpath + "data\\"
+    path = args.fpath + "data" + sep
     mode = args.mode
 
     questions = load_questions(path + "free917." + mode + ".examples.canonicalized.json")
     char = args.type.lower()
 
     if 'p' in char:
-        pickle.dump(pos_tag(questions),open(path + "pos_tagged_" + mode + ".pickle","wb"))
+        pickle.dump(pos_tag(questions), open(path + "pos_tagged_" + mode + ".pickle","wb"))
 
     if 'n' in char:
-        pickle.dump(ner_tag(questions),open(path + "ner_tagged_" + mode + ".pickle","wb"))
+        pickle.dump(ner_tag(questions), open(path + "ner_tagged_" + mode + ".pickle","wb"))
 
     if 'i' in char:
         pos_tagged = pickle.load(open(path + "pos_tagged_" + mode + ".pickle"))
