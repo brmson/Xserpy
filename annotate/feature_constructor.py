@@ -13,11 +13,11 @@ def object_decoder(obj):
 def uni_bi_tri(c, u, j):
     feature = []
     feature.append(c+"_u_"+u[j])
-    feature.append(c+"_b_"+u[j-1]+"_"+u[j])
-    feature.append(c+"_b_"+u[j]+"_"+u[j+1])
-    feature.append(c+"_t_"+u[j-2]+"_"+u[j-1]+"_"+u[j])
-    feature.append(c+"_t_"+u[j-1]+"_"+u[j]+"_"+u[j+1])
-    feature.append(c+"_t_"+u[j]+"_"+u[j+1]+"_"+u[j+2])
+    feature.append(c+"_b0_"+u[j-1]+"_"+u[j])
+    feature.append(c+"_b1_"+u[j]+"_"+u[j+1])
+    feature.append(c+"_t0_"+u[j-2]+"_"+u[j-1]+"_"+u[j])
+    feature.append(c+"_t1_"+u[j-1]+"_"+u[j]+"_"+u[j+1])
+    feature.append(c+"_t2_"+u[j]+"_"+u[j+1]+"_"+u[j+2])
     return feature
 
 def sub2ind(x, y, z, l):
@@ -95,21 +95,24 @@ if __name__ == "__main__":
     parser.add_argument("fpath", help="Path to files pos_tagged.pickle,ner_tagged.pickle,json dataset of questions and pickled labels of all words", type=str)
     parser.add_argument("size", help="Number of questions to construct features for", type=int, default=0)
     parser.add_argument("type", help="Operation performed,p = POS tagging,n = NER tagging,i = construct features", type=str, default=0)
+    parser.add_argument("mode", help="Training or testing mode, required values: trn or tst", type=str, default=0)
     args = parser.parse_args()
 
-    path = args.fpath
-    questions = load_questions(args.fpath + "free917.train.examples.canonicalized.json")
+    path = args.fpath + "data\\"
+    mode = args.mode
+
+    questions = load_questions(args.fpath + "free917." + mode + ".examples.canonicalized.json")
     char = args.type.lower()
 
     if 'p' in char:
-        pickle.dump(pos_tag(questions),open("pos_tagged.pickle","wb"))
+        pickle.dump(pos_tag(questions),open("pos_tagged_" + mode + ".pickle","wb"))
 
     if 'n' in char:
-        pickle.dump(ner_tag(questions),open("ner_tagged.pickle","wb"))
+        pickle.dump(ner_tag(questions),open("ner_tagged_" + mode + ".pickle","wb"))
 
     if 'i' in char:
-        pos_tagged = pickle.load(open(path + "pos_tagged.pickle"))
-        ner_tagged = pickle.load(open(path + "ner_tagged.pickle"))
+        pos_tagged = pickle.load(open(path + "pos_tagged_" + mode + ".pickle"))
+        ner_tagged = pickle.load(open(path + "ner_tagged_" + mode + ".pickle"))
         size = args.size
-        c = create_features(questions[:size], pos_tagged, ner_tagged, path+"questions_trn_"+str(size)+".pickle")
-        pickle.dump(c, open("phrase_detect_features_"+str(size)+"_arr.pickle", "wb"))
+        c = create_features(questions[:size], pos_tagged, ner_tagged, path+"questions_" + mode + "_" + str(size) + ".pickle")
+        pickle.dump(c, open("phrase_detect_features_" + mode + "_"+str(size)+"_arr.pickle", "wb"))
