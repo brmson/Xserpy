@@ -140,7 +140,8 @@ def check_dag(gold, dag):
                 return False
     return True
 
-def parse_phrases(questions, labels, pos):
+
+def parse_to_phrases(questions, labels, pos):
     pos_tag = []
     phrases = []
     for i in range(len(questions)):
@@ -186,38 +187,9 @@ def parse_phrases(questions, labels, pos):
                     del order[n]
                 n += 1
             m += 1
-        phrases.append(phrase)
+        phrases.append(zip(phrase,order))
         pos_tag.append(pos_t)
     return phrases, pos_tag
-
-def parse_to_phrases(questions, labels, pos_tagged):
-    phrases = []
-    pos_phrases = []
-    for i in range(len(questions)):
-        u = questions[i].utterance.split()
-        label = labels[i]
-        pos = pos_tagged[i]
-        dic = {}
-        phrase = ["", "", "", ""]
-        pos_phrase = ["", "", "", ""]
-        order = [0, 0, 0, 0]
-        j = 0
-        for index in range(len(label)):
-            l = label[index]
-            word = u[index]
-            p = pos[index]
-            index += 1
-            if l == 4:
-                continue
-            if l not in dic.keys():
-                dic[l] = j
-                order[j] = l
-                j += 1
-            phrase[dic[l]] += word + " "
-            pos_phrase[dic[l]] += p[1]+"_"
-        phrases.append(zip(phrase, order))
-        pos_phrases.append(pos_phrase)
-    return phrases, pos_phrases
 
 def derive_labels(dags, phrases, pos):
     sequences = []
@@ -333,33 +305,38 @@ if __name__ == "__main__":
     parser.add_argument("n_iter", help="Number of iterations for training", type=int, default=0)
     parser.add_argument("size", help="Size of dataset", type=int, default=0)
     parser.add_argument("type", help="How examples are loaded", type=str)
+    parser.add_argument("mode", help="Training or testing split", type=str)
+    parser.add_argument("beam", help="Beam size for beam search", type=int)
     args = parser.parse_args()
     path = args.fpath
+    mode = args.mode
+    size = args.size
+    n_iter = args.n_iter
+    beam = args.beam
 
-    questions = json.load(open(path+"data" + sep + "free917.test.examples.canonicalized.json"), object_hook=object_decoder)
-    labels = pickle.load(open(path+"data" + sep + "labels_tst_276.pickle"))
-    labs = pickle.load(open(path+"data" + sep + "questions_tst_276.pickle"))
-    dags = pickle.load(open(path+"annotate" + sep + "dags_100.pickle"))
-    pos_tagged = pickle.load(open(path + "data" + sep + "pos_tagged_tst.pickle"))
+    questions = json.load(open(path+"data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
+    labels = pickle.load(open(path+"data" + sep + "labels_" + mode + "_" + str(size) + ".pickle"))
+    labels_split = pickle.load(open(path+"data" + sep + "questions_" + mode + "_" + str(size) + ".pickle"))
+    pos_tagged = pickle.load(open(path + "data" + sep + "pos_tagged_" + mode + ".pickle"))
 
     if 'c' in args.type:
         phr = examples_to_phrases(labels, questions)
-        # phrases, pos = parse_phrases(questions, labs, pos_tagged)
-        phrases, pos = parse_to_phrases(questions, phr, pos_tagged)
+        phrases, pos = parse_to_phrases(questions, labels_split, pos_tagged)
         DAGs = parse_dags(phrases)
-        examples,seqs = derive_labels(dags, phrases, pos)
-        pickle.dump(examples,open("dag_labs_tst_276.pickle","wb"))
+        examples,seqs = derive_labels(DAGs, phrases, pos)
+        pickle.dump(examples,open(path + "data" + sep + "dag_examples_" + mode + "_" + str(size) + ".pickle","wb"))
+        pickle.dump(DAGs,open(path + "data" + sep + "gold_dags_" + mode + "_" + str(size) + ".pickle","wb"))
+        pickle.dump(seqs,open(path + "data" + sep + "gold_sequences_" + mode + "_" + str(size) + ".pickle","wb"))
+
     elif 'b' in args.type:
-        weights = pickle.load(open(path + "models" + sep + "w_dag100_i100.pickle"))
-        labels = pickle.load(open("dag_labels_tst_276.pickle"))
-        phrases, pos = parse_phrases(questions, labs, pos_tagged)
-        d = batch_shift_reduce(phrases, pos, weights, 1000)
-        # pickle.dump(d,open("dags_tst_276.pickle","wb"))
-        # d = pickle.load(open("dags_tst_276.pickle"))
+        weights = pickle.load(open(path + "models" + sep + "w_dag" + str(size) + "_i" + str(n_iter) + ".pickle"))
+        labels = pickle.load(open(path + "data" + sep + "gold_dags_" + mode + "_" + str(size) + ".pickle"))
+        phrases, pos = parse_to_phrases(questions, labels_split, pos_tagged)
+        d = batch_shift_reduce(phrases, pos, weights, beam)
         print compute_error(d,labels)
+        
     else:
-        examples = pickle.load(open(""))
+        examples = pickle.load(open(path + "data" + sep + "dag_examples_" + mode + "_" + str(size) + ".pickle"))
         c = 4
-        size = args.size
-        weights = train(args.n_iter, examples, init_weights(examples, {}, c), c)
+        weights = train(n_iter, examples, init_weights(examples, {}, c), c)
         pickle.dump(weights, open(path+"models" + sep + "w_dag" + str(size) + "_i" + str(args.n_iter) + ".pickle", "wb"))
