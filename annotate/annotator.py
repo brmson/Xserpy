@@ -131,6 +131,8 @@ def parse_phrases(questions, labels):
     return phrases
 
 def parse_dags(phrases):
+    """ phrases is a list of phrase variables, where each phrase
+    is a list of tuples of (string, number) where number is entity type """
     dags = []
     for phrase in phrases:
         dag = [[] for e in range(len(phrase))]
