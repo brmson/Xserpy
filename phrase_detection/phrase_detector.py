@@ -75,6 +75,5 @@ if __name__ == "__main__":
         pickle.dump(examples,open(path + "data" + sep + "phr_detect_examples_" + mode + "_" + str(args.size) + ".pickle","wb"))
     else:
         examples = pickle.load(open(path + "data" + sep + "phr_detect_examples_" + mode + "_" + str(args.size) + ".pickle"))
-
-    w = train(args.n_iter, examples, init_weights(examples, {}, 5), 5, learning_rate)
-    pickle.dump(w, open(path + "models" + sep + "w_" + str(args.size) + "_i" + str(args.n_iter) + ".pickle", "wb"))
+        w = train(args.n_iter, examples, init_weights(examples, {}, 5), 5, learning_rate)
+        pickle.dump(w, open(path + "models" + sep + "w_" + str(args.size) + "_i" + str(args.n_iter) + ".pickle", "wb"))
