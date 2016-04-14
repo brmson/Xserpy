@@ -209,7 +209,6 @@ def derive_labels(dags, phrases, pos):
         dag = []
         for dd in ddag:
             dag.append([int(d) for d in dd])
-        # print dag
         new_item = Item([], phrase, [[] for p in range(len(phrase))], [], [], (phrases[i], pos[i]))
         queue = [new_item]
 
@@ -217,11 +216,8 @@ def derive_labels(dags, phrases, pos):
             item = queue.pop()
             if item.dag == dag:
                 if sequence is None or len(item.sequence) < sequence:
-                # print dag
-                # print item.sequence
                     sequence = item.sequence
                     feature = item.features
-                # break
             if not item.queue:
                 continue
             else:
@@ -265,7 +261,6 @@ def compute_error(dags, gold):
     for i in range(len(dags)):
         dag = dags[i].dag
         g = gold[i]
-        # print i, len(dag), len(g)
         if len(dag) == len(g):
             if dag == g:
                 correct += 1
@@ -281,19 +276,6 @@ def compute_error(dags, gold):
                     for ggg in gg:
                         if ggg not in dd:
                             edge_err += 1
-                # for j in range(len(dag)):
-                #     a = dag[j]
-                #     b = g[j]
-                #     d = list(set(a).difference(b))+list(set(b).difference(a))
-                #     if len(d) > 0:
-                #         D = 1.0
-                #         break
-                # correct += D
-                #     correct += float(len(d))
-                #     total += len(dag)
-
-    # total = len(gold)
-    # print correct, total
     return noedge_err,edge_err,total,correct
 
 
