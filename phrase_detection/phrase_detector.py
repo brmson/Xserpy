@@ -72,8 +72,11 @@ if __name__ == "__main__":
         words = pickle.load(open(path + "data" + sep + "phrase_detect_features_" + mode + "_" + str(args.size) + "_arr.pickle"))
         labels = pickle.load(open(path + "data" + sep + "labels_" + mode + "_" + str(args.size) + ".pickle"))
         examples = zip(words, labels)
-        pickle.dump(examples,open(path + "data" + sep + "phr_detect_examples_" + mode + "_" + str(args.size) + ".pickle","wb"))
+        empty_weights = init_weights(examples, {}, 5)
+        pickle.dump(examples, open(path + "data" + sep + "phr_detect_examples_" + mode + "_" + str(args.size) + ".pickle","wb"))
+        pickle.dump(empty_weights, open(path + "data" + sep + "empty_weights_" + mode + "_" + str(args.size) + ".pickle","wb"))
     else:
         examples = pickle.load(open(path + "data" + sep + "phr_detect_examples_" + mode + "_" + str(args.size) + ".pickle"))
-        w = train(args.n_iter, examples, init_weights(examples, {}, 5), 5, learning_rate)
+        weights = pickle.load(open(path + "data" + sep + "empty_weights_" + mode + "_" + str(args.size) + ".pickle"))
+        w = train(args.n_iter, examples, weights, 5, learning_rate)
         pickle.dump(w, open(path + "models" + sep + "w_" + str(args.size) + "_i" + str(args.n_iter) + ".pickle", "wb"))

@@ -315,6 +315,7 @@ if __name__ == "__main__":
     n_iter = args.n_iter
     beam = args.beam
     learning_rate = args.rate
+    c = 4
 
     questions = json.load(open(path+"data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
     labels = pickle.load(open(path+"data" + sep + "labels_" + mode + "_" + str(size) + ".pickle"))
@@ -326,9 +327,11 @@ if __name__ == "__main__":
         phrases, pos = parse_to_phrases(questions, labels_split, pos_tagged)
         DAGs = parse_dags(phrases)
         examples,seqs = derive_labels(DAGs, phrases, pos)
+        empty_weights = init_weights(examples, {}, c)
         pickle.dump(examples,open(path + "data" + sep + "dag_examples_" + mode + "_" + str(size) + ".pickle","wb"))
         pickle.dump(DAGs,open(path + "data" + sep + "gold_dags_" + mode + "_" + str(size) + ".pickle","wb"))
         pickle.dump(seqs,open(path + "data" + sep + "gold_sequences_" + mode + "_" + str(size) + ".pickle","wb"))
+        pickle.dump(empty_weights,open(path + "data" + sep + "empty_weigths_dag_" + mode + "_" + str(size) + ".pickle","wb"))
 
     elif 'b' in args.type:
         weights = pickle.load(open(path + "models" + sep + "w_dag" + str(size) + "_i" + str(n_iter) + ".pickle"))
@@ -339,6 +342,6 @@ if __name__ == "__main__":
         
     else:
         examples = pickle.load(open(path + "data" + sep + "dag_examples_" + mode + "_" + str(size) + ".pickle"))
-        c = 4
-        weights = train(n_iter, examples, init_weights(examples, {}, c), c, learning_rate)
+        empty_weights = pickle.load(open(path + "data" + sep + "empty_weigths_dag_" + mode + "_" + str(size) + ".pickle"))
+        weights = train(n_iter, examples, empty_weights, c, learning_rate)
         pickle.dump(weights, open(path+"models" + sep + "w_dag" + str(size) + "_i" + str(args.n_iter) + ".pickle", "wb"))
