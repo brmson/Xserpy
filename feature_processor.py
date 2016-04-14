@@ -1,5 +1,5 @@
-import pickle,numpy as np
-from sklearn.preprocessing import Imputer,OneHotEncoder
+import argparse, pickle, numpy as np
+from sklearn.preprocessing import Imputer, OneHotEncoder
 
 def process_features(ftr):
     features = {}
@@ -33,14 +33,18 @@ def encode(features, labels):
     enc = OneHotEncoder()
     enc.fit(features)
     arr = enc.transform(features).toarray()
-    result = np.array([[0 for j in range(len(arr[0])+1)] for i in range(len(arr))])
+    result = np.array([[0 for j in range(len(arr[0])+1)] for k in range(len(arr))])
     for i in range(len(arr)):
         result[i] = np.append(arr[i], labels[i])
     return result
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train weights for DAG detection")
+    parser.add_argument("fpath", help="Path to file", type=str)
+    args = parser.parse_args()
+    path = args.fpath
 
-    examples = pickle.load(open("dag_labs_tst_276.pickle"))
+    examples = pickle.load(open(path))
     ftr = zip(*examples)
     features = encode(imputator(process_features(ftr[0])),ftr[1])
     np.savetxt("features.csv", features, delimiter=",")
