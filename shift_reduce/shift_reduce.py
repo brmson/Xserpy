@@ -303,11 +303,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train weights for DAG detection")
     parser.add_argument("fpath", help="Path to features and labels (array format)", type=str)
     parser.add_argument("n_iter", help="Number of iterations for training", type=int, default=0)
-    parser.add_argument("size", help="Size of dataset", type=int, default=0)
-    parser.add_argument("type", help="How examples are loaded", type=str)
+    parser.add_argument("--size", help="Size of dataset", type=int, default=641)
+    parser.add_argument("type", help="Operating mode for script", type=str)
     parser.add_argument("mode", help="Training or testing split", type=str)
     parser.add_argument("beam", help="Beam size for beam search", type=int)
-    parser.add_argument("rate", help="Learning rate for training", type=int, default=1)
+    parser.add_argument("--rate", help="Learning rate for training", type=int, default=1)
     args = parser.parse_args()
     path = args.fpath
     mode = args.mode

@@ -57,11 +57,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Train weights for detecting phrases")
     parser.add_argument("fpath", help="Path to features and labels (array format)", type=str)
-    parser.add_argument("n_iter", help="Number of iterations for training", type=int, default=0)
-    parser.add_argument("size", help="Size of dataset", type=int, default=0)
+    parser.add_argument("n_iter", help="Number of iterations for training", type=int, default=100)
+    parser.add_argument("--size", help="Size of dataset", type=int, default=641)
     parser.add_argument("type", help="How examples are loaded", type=str)
     parser.add_argument("mode", help="Training or testing mode, required values: trn or tst", type=str)
-    parser.add_argument("rate", help="Learning rate", type=int, default=1)
+    parser.add_argument("--rate", help="Learning rate", type=int, default=1)
     args = parser.parse_args()
 
     path = args.fpath
