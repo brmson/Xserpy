@@ -40,11 +40,13 @@ def encode(features, labels):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train weights for DAG detection")
-    parser.add_argument("fpath", help="Path to file", type=str)
+    parser.add_argument("fpath", help="Examples file name", type=str)
+    parser.add_argument("output", help="Output file name", type=str)
     args = parser.parse_args()
     path = args.fpath
+    output = args.output
 
     examples = pickle.load(open(path))
     ftr = zip(*examples)
     features = encode(imputator(process_features(ftr[0])),ftr[1])
-    np.savetxt("features.csv", features, delimiter=",")
+    np.savetxt(output + ".csv", features, delimiter=",")
