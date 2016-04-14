@@ -307,12 +307,14 @@ if __name__ == "__main__":
     parser.add_argument("type", help="How examples are loaded", type=str)
     parser.add_argument("mode", help="Training or testing split", type=str)
     parser.add_argument("beam", help="Beam size for beam search", type=int)
+    parser.add_argument("rate", help="Learning rate for training", type=int, default=1)
     args = parser.parse_args()
     path = args.fpath
     mode = args.mode
     size = args.size
     n_iter = args.n_iter
     beam = args.beam
+    learning_rate = args.rate
 
     questions = json.load(open(path+"data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
     labels = pickle.load(open(path+"data" + sep + "labels_" + mode + "_" + str(size) + ".pickle"))
@@ -338,5 +340,5 @@ if __name__ == "__main__":
     else:
         examples = pickle.load(open(path + "data" + sep + "dag_examples_" + mode + "_" + str(size) + ".pickle"))
         c = 4
-        weights = train(n_iter, examples, init_weights(examples, {}, c), c)
+        weights = train(n_iter, examples, init_weights(examples, {}, c), c, learning_rate)
         pickle.dump(weights, open(path+"models" + sep + "w_dag" + str(size) + "_i" + str(args.n_iter) + ".pickle", "wb"))

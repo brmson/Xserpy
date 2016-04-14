@@ -29,8 +29,7 @@ def init_weights(examples, weights, cl):
                     weights[f][j] = 0
     return weights
 
-def train(n_iter,  examples, weights, cl):
-    learning_rate = 10
+def train(n_iter,  examples, weights, cl, learning_rate):
     for i in range(n_iter):
         err = 0
         for features,  true in examples:
@@ -62,10 +61,12 @@ if __name__ == "__main__":
     parser.add_argument("size", help="Size of dataset", type=int, default=0)
     parser.add_argument("type", help="How examples are loaded", type=str)
     parser.add_argument("mode", help="Training or testing mode, required values: trn or tst", type=str)
+    parser.add_argument("rate", help="Learning rate", type=int, default=1)
     args = parser.parse_args()
 
     path = args.fpath
     mode = args.mode
+    learning_rate = args.rate
 
     if 'l' in args.type:
         words = pickle.load(open(path + "data" + sep + "phrase_detect_features_" + mode + "_" + str(args.size) + "_arr.pickle"))
@@ -75,5 +76,5 @@ if __name__ == "__main__":
     else:
         examples = pickle.load(open(path + "data" + sep + "phr_detect_examples_" + mode + "_" + str(args.size) + ".pickle"))
 
-    w = train(args.n_iter, examples, init_weights(examples, {}, 5), 5)
+    w = train(args.n_iter, examples, init_weights(examples, {}, 5), 5, learning_rate)
     pickle.dump(w, open(path + "models" + sep + "w_" + str(args.size) + "_i" + str(args.n_iter) + ".pickle", "wb"))
