@@ -1,7 +1,10 @@
-from fb_query import *
-from query_instantiate import Instance, beam_search, train_with_beam, score
-import pickle,nltk
+import pickle
+
 from nltk.stem.wordnet import WordNetLemmatizer
+
+from query_intention.fb_query import *
+from query_instantiate import Instance
+
 
 def obtain_feature(phrase, candidates):
     f = {}

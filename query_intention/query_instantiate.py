@@ -1,6 +1,12 @@
-import json, pickle, random,argparse,os
+import json
+import pickle
+import random
+import argparse
+import os
+
 from annotate.annotator import object_decoder, parse_phrases, parse_dags
-from phrase_detector import train, compute_score
+from phrase_detection.phrase_detector import compute_score
+
 
 class Instance:
     def __init__(self, sentence, candidates, dependencies, label):
