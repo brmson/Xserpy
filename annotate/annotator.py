@@ -1,7 +1,7 @@
-import argparse, json, pickle
-from phrase_detector import *
-from feature_constructor import label_phrases
+import json,os
 
+from phrase_detection.phrase_detector import *
+from phrase_detection.feature_constructor import label_phrases
 
 
 class Question(object):
@@ -38,9 +38,8 @@ def annotate_questions_label(questions, start):
                 inp = raw_input("oprava: ")
             label = dic[inp]
             L.append(label)
-        # print M
         labeled.append(L)
-    pickle.dump(labeled, open("questions_train_"+str(start+1)+"_"+str(start+20)+".pickle", "wb"))
+    pickle.dump(labeled, open("questions_test_"+str(start+1)+"_"+str(start+20)+".pickle", "wb"))
 
 def bootstrap(questions, features, labels, step, n_iter, start):
     path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
@@ -49,47 +48,17 @@ def bootstrap(questions, features, labels, step, n_iter, start):
     examples = zip(features, labels)
     i = start
     L = []
-    # ll = open("labels.txt", 'w')
     weights = init_weights(examples, {}, 5)
     while i < len(questions):
         weights = train(n_iter, examples, weights, 5)
         f,  l = label_phrases(questions[i:min(len(questions), i+step)], pos_tagged[i:min(len(questions), i+step)], ner_tagged[i:min(len(questions), i+step)], weights)
-        # for L in l:
-        #     print L
-        #     ll.write(str(L)+"\n")
         L += l
         weights = init_weights(zip(f, l), weights, 5)
         examples = examples + zip(f, l)
         i = i + step
-    #     print i
-    #     ll.flush()
-    # ll.close()
     return labels + L
 
 def parse_to_phrases(questions, labels):
-    phrases = []
-    for i in range(len(questions)):
-        u = questions[i].utterance.split()
-        label = labels[i]
-        dic = {}
-        phrase = ["", "", "", ""]
-        order = [0, 0, 0, 0]
-        j = 0
-        for index in range(len(label)):
-            l = label[index]
-            word = u[index]
-            index += 1
-            if l == 4:
-                continue
-            if l not in dic.keys():
-                dic[l] = j
-                order[j] = l
-                j += 1
-            phrase[dic[l]] += word + " "
-        phrases.append(zip(phrase, order))
-    return phrases
-
-def parse_phrases(questions, labels):
     phrases = []
     for i in range(len(questions)):
         u = [q for q in questions[i].utterance.split()]
@@ -129,6 +98,8 @@ def parse_phrases(questions, labels):
             m += 1
         phrases.append(zip(phrase, order))
     return phrases
+
+
 
 def parse_dags(phrases):
     """ phrases is a list of phrase variables, where each phrase
@@ -175,14 +146,28 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Annotate questions with DAGs")
     parser.add_argument("fpath", help="filepath", type=str)
     parser.add_argument("start", help="start", type=int, default=0)
+    parser.add_argument("size", help="Dataset size", type=int, default=0)
+    parser.add_argument("type", help="Operating mode", type=str)
+    parser.add_argument("mode", help="Training/testing", type=str)
     args = parser.parse_args()
+    path = args.fpath
+    mode = args.mode
+    type = args.type
+    size = args.size
+    start = args.start
+    sep = os.path.sep
 
-    path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    words = pickle.load(open(path+"annotate\\phrase_detect_features_100_arr.pickle"))
-    labels = pickle.load(open(path+"data\\labels_trn_100.pickle"))
+    words = pickle.load(open(path+"data\\phrase_detect_features_" + mode + "_" + str(size) + "_arr.pickle"))
+    labels = pickle.load(open(path+"data\\labels_" + mode + "_" + str(size) + ".pickle"))
     questions = json.load(open(args.fpath), object_hook=object_decoder)
-    # annotate_questions_label(questions, 120)
-    examples = bootstrap(questions, words, labels, 40, 50, 100)
-    # phrases = parse_phrases(questions[:100], labels)
-    # dags = parse_dags(phrases)
-    pickle.dump(examples, open(path+"data\\all_examples.pickle", "wb"))
+
+    if 'b' in type:
+        step = 40
+        n_iter = 50
+        examples = bootstrap(questions, words, labels, step, n_iter, start)
+        pickle.dump(examples, open(path+"data\\b_examples" + mode + "_" + str(size) + ".pickle", "wb"))
+    elif 'l' in type:
+        annotate_questions_label(questions, start)
+    else:
+        dags = annotate_questions_dag(parse_to_phrases(questions, labels))
+        pickle.dump(dags, open(path+"data\\dag_m_examples" + mode + "_" + str(size) + ".pickle", "wb"))
