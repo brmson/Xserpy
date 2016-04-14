@@ -18,12 +18,12 @@ def object_decoder(obj):
 
 def uni_bi_tri(c, u, j):
     feature = []
-    feature.append(c+"_u_"+u[j])
-    feature.append(c+"_b0_"+u[j-1]+"_"+u[j])
-    feature.append(c+"_b1_"+u[j]+"_"+u[j+1])
-    feature.append(c+"_t0_"+u[j-2]+"_"+u[j-1]+"_"+u[j])
-    feature.append(c+"_t1_"+u[j-1]+"_"+u[j]+"_"+u[j+1])
-    feature.append(c+"_t2_"+u[j]+"_"+u[j+1]+"_"+u[j+2])
+    feature.append(c+"_u."+u[j])
+    feature.append(c+"_b0."+u[j-1]+"_"+u[j])
+    feature.append(c+"_b1."+u[j]+"_"+u[j+1])
+    feature.append(c+"_t0."+u[j-2]+"_"+u[j-1]+"_"+u[j])
+    feature.append(c+"_t1."+u[j-1]+"_"+u[j]+"_"+u[j+1])
+    feature.append(c+"_t2."+u[j]+"_"+u[j+1]+"_"+u[j+2])
     return feature
 
 def sub2ind(x, y, z, l):
@@ -58,8 +58,8 @@ def construct_feature(p, u, n, j, l):
     n_f = uni_bi_tri('n', n, j)
 
     feature = w_f + p_f + n_f
-    feature.append("l_"+str(l))
-    feature.append("l_w_"+str(l)+"_"+u[j])
+    feature.append("l."+str(l))
+    feature.append("l_w."+str(l)+"_"+u[j])
     return feature
 
 def label_phrases(questions, pos_tagged, ner_tagged, weights):
