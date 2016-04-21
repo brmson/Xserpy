@@ -109,23 +109,28 @@ def parse_dags(phrases):
         dag = [[] for e in range(len(phrase))]
         for i in range(len(phrase)):
             p = phrase[i]
-            # if p[1] == 2 or p[1] == [1]:
-            #     continue
             for j in range(i+1, len(phrase)):
                 q = phrase[j]
+
                 if p[1] == 0:
                     if q[1] == 1:
                         dag[j].append(i)
+                    # elif q[1] == 3:
+                    #     dag[i].append(j)
+
+                elif p[1] == 1:
+                    if q[1] == 0:
+                        dag[i].append(j)
                     elif q[1] == 3:
                         dag[i].append(j)
-                elif p[1] == 1 and q[1] == 0:
-                    dag[i].append(j)
+
                 elif p[1] == 2 and q[1] == 3:
                     dag[i].append(j)
+
                 elif p[1] == 3:
                     if q[1] == 2:
                         dag[j].append(i)
-                    elif q[1] == 0:
+                    elif q[1] == 1:
                         dag[j].append(i)
         dags.append(dag)
     return dags
