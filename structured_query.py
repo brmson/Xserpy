@@ -11,28 +11,29 @@ def convert_to_queries(dag, phrase):
     for i in range(len(phrase)):
         query = ""
         index = i*(len(phrase)+1)
-        edges = dag[index+1:index+len(phrase)+1]
-        for j in range(len(edges)):
-            k = j*(len(phrase)+1)
-            if edges[j] != ':x':
-                if edges[j] == ':SP':
-                    if len(Q) == 0:
-                        Q = dag[k] + " " + dag[index]
+        if dag[index] != ':x':
+            edges = dag[index+1:index+len(phrase)+1]
+            for j in range(len(edges)):
+                k = j*(len(phrase)+1)
+                if edges[j] != ':x':
+                    if edges[j] == ':SP':
+                        if len(Q) == 0:
+                            Q = dag[k] + " " + dag[index]
+                        else:
+                            Q = dag[k] + " " + Q
+                            query = Q
+                    elif edges[j] == ':PO':
+                        if len(Q) == 0:
+                            Q = dag[index] + " " + dag[k]
+                        else:
+                            Q = Q + " " + dag[k]
+                            query = Q
+                    elif edges[j] == ':SC':
+                        query = dag[k] + " :type.object.type " + dag[index]
+                        # query = dag[k] + " " + dag[index] + " ?cvt"
+                        # dag[0] = "?cvt"
                     else:
-                        Q = dag[k] + " " + Q
-                        query = Q
-                elif edges[j] == ':PO':
-                    if len(Q) == 0:
-                        Q = dag[index] + " " + dag[k]
-                    else:
-                        Q = Q + " " + dag[k]
-                        query = Q
-                elif edges[j] == ':SC':
-                    # query = dag[index]+" :type.object.type "+dag[k]
-                    query = dag[k] + " " + dag[index] + " ?cvt"
-                    dag[0] = "?cvt"
-                else:
-                    query = dag[index] + " " + edges[j] + " " + dag[k]
+                        query = dag[index] + " " + edges[j] + " " + dag[k]
         if len(query) > 0:
             queries.append(query)
     return queries
@@ -42,8 +43,8 @@ def create_query_file(filename, queries,phr):
     f = open(filename, "w")
     f.write("PREFIX : <http://rdf.freebase.com/ns/>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n")
     select = "?x"
-    if ('when ',3) not in phr:
-        queries.append('?x rdfs:label ?name .\nFILTER (lang(?name) = \'en\')\n')
+    if ('when ',3) not in phr and ('how many ',3) not in phr:
+        queries.append('?x rdfs:label ?name .\nFILTER (lang(?name) = \'en\')')
         select = "?name"
     if ('how many ',3) in phr:
         f.write("SELECT count(" + select + ") {\n")
@@ -69,11 +70,11 @@ def get_entity_names(dag):
     return result
 
 if __name__ == "__main__":
-    dags = pickle.load(open("query_int_40.pickle"))
+    dags = pickle.load(open("query_gold_0_100.pickle"))
     phrases = pickle.load(open("annotate\\dags_100.pickle"))
     phr = pickle.load(open("phrases_100.pickle"))
 
-    i = 35
+    i = 70
     q = []
     for d, p in zip(dags[i:i+1], phrases[i:i+1]):
         q.append(convert_to_queries(d, p))
