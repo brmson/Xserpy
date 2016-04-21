@@ -254,7 +254,7 @@ def batch_shift_reduce(sentences, pos, weights, size):
         result.append(shift_reduce(sentence, p, weights, size))
     return result
 
-def compute_error(dags, gold):
+def compute_error(dags, gold, seqs):
     correct = 0
     total = 0
     noedge_err = 0
@@ -262,7 +262,7 @@ def compute_error(dags, gold):
     for i in range(len(dags)):
         dag = dags[i].dag
         g = gold[i]
-        if len(dag) == len(g):
+        if len(dag) == len(g) and len(seqs[i]) > 0:
             if dag == g:
                 correct += 1
                 total += len(dag)**2
@@ -277,6 +277,8 @@ def compute_error(dags, gold):
                     for ggg in gg:
                         if ggg not in dd:
                             edge_err += 1
+        else:
+            print i
     return noedge_err,edge_err,total,correct
 
 
@@ -311,17 +313,18 @@ if __name__ == "__main__":
         DAGs = parse_dags(phrases)
         examples,seqs = derive_labels(DAGs, phrases, pos)
         empty_weights = init_weights(examples, {}, c)
-        pickle.dump(examples,open(path + "data" + sep + "dag_examples_" + mode + "_" + str(size) + ".pickle","wb"))
-        pickle.dump(DAGs,open(path + "data" + sep + "gold_dags_" + mode + "_" + str(size) + ".pickle","wb"))
-        pickle.dump(seqs,open(path + "data" + sep + "gold_sequences_" + mode + "_" + str(size) + ".pickle","wb"))
-        pickle.dump(empty_weights,open(path + "data" + sep + "empty_weights_dag_" + mode + "_" + str(size) + ".pickle","wb"))
+        pickle.dump(examples, open(path + "data" + sep + "dag_examples_" + mode + "_" + str(size) + ".pickle","wb"))
+        pickle.dump(DAGs, open(path + "data" + sep + "gold_dags_" + mode + "_" + str(size) + ".pickle","wb"))
+        pickle.dump(seqs, open(path + "data" + sep + "gold_sequences_" + mode + "_" + str(size) + ".pickle","wb"))
+        pickle.dump(empty_weights, open(path + "data" + sep + "empty_weights_dag_" + mode + "_" + str(size) + ".pickle","wb"))
 
     elif 'b' in args.type:
         weights = pickle.load(open(path + "models" + sep + "w_dag641_i" + str(n_iter) + ".pickle"))
         labels = pickle.load(open(path + "data" + sep + "gold_dags_" + mode + "_" + str(size) + ".pickle"))
         phrases, pos = parse_to_phrases(questions, labels_split, pos_tagged)
         d = batch_shift_reduce(phrases, pos, weights, beam)
-        print compute_error(d,labels)
+        seqs = pickle.load(open(path + "data" + sep + "gold_sequences_" + mode + "_" + str(size) + ".pickle"))
+        print compute_error(d,labels, seqs)
         
     else:
         examples = pickle.load(open(path + "data" + sep + "dag_examples_" + mode + "_" + str(size) + ".pickle"))
