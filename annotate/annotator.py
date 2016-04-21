@@ -99,39 +99,54 @@ def parse_to_phrases(questions, labels):
         phrases.append(zip(phrase, order))
     return phrases
 
-
+def count_entities(phrase):
+    result = 0
+    index = 0
+    for i in range(len(phrase)):
+        if phrase[i][1] == 0:
+            result += 1
+        elif phrase[i][1] == 1:
+            index = i
+    return result, index
 
 def parse_dags(phrases):
     """ phrases is a list of phrase variables, where each phrase
     is a list of tuples of (string, number) where number is entity type """
     dags = []
     for phrase in phrases:
+        result, index = count_entities(phrase)
         dag = [[] for e in range(len(phrase))]
-        for i in range(len(phrase)):
-            p = phrase[i]
-            for j in range(i+1, len(phrase)):
-                q = phrase[j]
+        if result > 1:
+            e = range(len(phrase))
+            e.remove(index)
+            for E in e:
+                dag[E].append(index)
+        else:
+            for i in range(len(phrase)):
+                p = phrase[i]
+                for j in range(i+1, len(phrase)):
+                    q = phrase[j]
 
-                if p[1] == 0:
-                    if q[1] == 1:
-                        dag[j].append(i)
-                    # elif q[1] == 3:
-                    #     dag[i].append(j)
+                    if p[1] == 0:
+                        if q[1] == 1:
+                            dag[j].append(i)
+                        # elif q[1] == 3:
+                        #     dag[i].append(j)
 
-                elif p[1] == 1:
-                    if q[1] == 0:
+                    elif p[1] == 1:
+                        if q[1] == 0:
+                            dag[i].append(j)
+                        elif q[1] == 3:
+                            dag[i].append(j)
+
+                    elif p[1] == 2 and q[1] == 3:
                         dag[i].append(j)
-                    elif q[1] == 3:
-                        dag[i].append(j)
 
-                elif p[1] == 2 and q[1] == 3:
-                    dag[i].append(j)
-
-                elif p[1] == 3:
-                    if q[1] == 2:
-                        dag[j].append(i)
-                    elif q[1] == 1:
-                        dag[j].append(i)
+                    elif p[1] == 3:
+                        if q[1] == 2:
+                            dag[j].append(i)
+                        elif q[1] == 1:
+                            dag[j].append(i)
         dags.append(dag)
     return dags
 
