@@ -26,7 +26,8 @@ def convert_question(phrase, dag, qint, question, features, pos_tagged):
 
 if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description="Train weights for detecting query intention or create gold standard")
+    parser = argparse.ArgumentParser(description="Process one question from dataset")
+    parser.add_argument("fpath", help="Path to data", type=str)
     parser.add_argument("size", help="Dataset size", type=int, default=0)
     parser.add_argument("i", help="Index", type=int, default=0)
     parser.add_argument("n_iter", help="Number of iterations", type=int, default=0)
@@ -34,13 +35,13 @@ if __name__ == "__main__":
     parser.add_argument("mode", help="mode", type=str)
     args = parser.parse_args()
     size = args.size
+    path = args.fpath
     i = args.i
     n_iter = args.n_iter
     n_iter_dag = args.n_iter_dag
     mode = args.mode
 
     sep = os.path.sep
-    path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
 
     pos = pickle.load(open("data" + sep + "pos_tagged_" + mode + ".pickle"))
     questions = json.load(open(path+"data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
