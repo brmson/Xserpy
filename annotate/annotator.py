@@ -120,7 +120,7 @@ def parse_dags(phrases):
             e = range(len(phrase))
             e.remove(index)
             for E in e:
-                dag[E].append(index)
+                dag[index].append(E)
         else:
             for i in range(len(phrase)):
                 p = phrase[i]
@@ -191,4 +191,4 @@ if __name__ == "__main__":
     else:
         labels = pickle.load(open(path+"data" + sep + "questions_" + mode + "_" + str(size) + ".pickle"))
         dags = annotate_questions_dag(parse_to_phrases(questions, labels))
-        pickle.dump(dags, open(path+"data" + sep + "dag_m_examples" + mode + "_" + str(size) + ".pickle", "wb"))
+        pickle.dump(dags, open(path+"data" + sep + "dag_m_examples_" + mode + "_" + str(size) + ".pickle", "wb"))
