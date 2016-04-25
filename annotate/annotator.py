@@ -1,4 +1,4 @@
-import json,os
+import json, os.path
 
 from phrase_detection.phrase_detector import *
 from phrase_detection.feature_constructor import label_phrases
@@ -177,9 +177,9 @@ if __name__ == "__main__":
     start = args.start
     sep = os.path.sep
 
-    words = pickle.load(open(path+"data\\phrase_detect_features_" + mode + "_" + str(size) + "_arr.pickle"))
-    labels = pickle.load(open(path+"data\\labels_" + mode + "_" + str(size) + ".pickle"))
-    questions = json.load(open(args.fpath), object_hook=object_decoder)
+    words = pickle.load(open(path+"data" + sep + "phrase_detect_features_" + mode + "_" + str(size) + "_arr.pickle"))
+    labels = pickle.load(open(path+"data" + sep + "labels_" + mode + "_" + str(size) + ".pickle"))
+    questions = json.load(open(args.fpath + "data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
 
     if 'b' in type:
         step = 40
@@ -189,5 +189,6 @@ if __name__ == "__main__":
     elif 'l' in type:
         annotate_questions_label(questions, start)
     else:
+        labels = pickle.load(open(path+"data" + sep + "questions_" + mode + "_" + str(size) + ".pickle"))
         dags = annotate_questions_dag(parse_to_phrases(questions, labels))
-        pickle.dump(dags, open(path+"data\\dag_m_examples" + mode + "_" + str(size) + ".pickle", "wb"))
+        pickle.dump(dags, open(path+"data" + sep + "dag_m_examples" + mode + "_" + str(size) + ".pickle", "wb"))
