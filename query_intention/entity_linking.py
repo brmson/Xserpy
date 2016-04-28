@@ -3,7 +3,7 @@ import pickle, os, argparse
 from nltk.stem.wordnet import WordNetLemmatizer
 
 from query_intention.fb_query import *
-from query_instantiate import Instance,parse_to_phrases,object_decoder
+from query_instantiate import Instance, parse_to_phrases, object_decoder, get_db_entities
 
 
 def obtain_feature(phrase, candidates):
@@ -80,6 +80,26 @@ def obtain_rel_candidates(candidates):
             result.append([])
     return result
 
+def obtain_entity_labels(candidates,entities):
+    labels = []
+    for j in range(len(candidates)):
+        candidate = candidates[j]
+        label = 5
+        if len(candidate) == 1:
+            entity = entities[j]
+            for e in entity:
+                if e[:3] == 'en.':
+                    gold = '/' + e.replace('.', '/')
+                    for i in range(len(candidate[0])):
+                        c = candidate[0][i]
+                        if 'id' in c.keys():
+                            if c['id'] == gold:
+                                label = i
+                                break
+                    break
+        labels.append(label)
+    return labels
+
 def obtain_pop_score(entities):
     scoring = ['freebase','schema','schema','freebase']
     category = [False, True, True,False]
@@ -128,3 +148,8 @@ if __name__ == "__main__":
     if 'f' in type:
         candidates = pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
         get_features(phrases,candidates)
+    if 'g' in type:
+        candidates = pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
+        ent, s = get_db_entities(questions)
+        labels = obtain_entity_labels(candidates, ent)
+        pickle.dump(candidates,open(path + "data" + sep + "gold_entities_" + mode + "_" + str(size) + ".pickle","wb"))
