@@ -10,9 +10,11 @@ def obtain_feature(phrase, candidates):
     f = {}
     for c in candidates:
         feature = []
-        ph = phrase[0]
+        ph = phrase[0][:-1]
         s = c['name']
         name = s.replace(' ','_')
+        ph_id = ph.replace(' ','_').lower()
+        c_id = c['id'][4:]
         if ph == s:
             feature.append("eq_"+name+"_"+ph)
         elif s.startswith(ph):
@@ -24,7 +26,20 @@ def obtain_feature(phrase, candidates):
         overlap = len(s) - len(s.replace(ph, ''))
         if overlap > 0:
             feature.append("over_"+name+"_"+ph+"_"+str(overlap))
-        feature.append('pop_'+str(c['score']))
+
+        if ph_id == c_id:
+            feature.append("eq_id_"+name+"_"+ph_id)
+        elif c_id.startswith(ph_id):
+            feature.append("pre_id_"+name+"_"+ph_id)
+        elif c_id.endswith(ph_id):
+            feature.append("suf_id_"+name+"_"+ph_id)
+        elif ph_id in c_id:
+            feature.append("in_id_"+name+"_"+ph_id)
+        overlap = len(c_id) - len(c_id.replace(ph_id, ''))
+        if overlap > 0:
+            feature.append("over_id_"+name+"_"+ph_id+"_"+str(overlap))
+        # feature.append(c['score'])
+
         f[c['mid']] = feature
     return f
 
@@ -32,7 +47,7 @@ def get_features(phrases, candidates):
     features = {}
     for i in range(len(phrases)):
         for j in range(len(phrases[i])):
-            features.update(obtain_feature(phrases[i][j],candidates[i][j]))
+            features.update(obtain_feature(phrases[i][-1],candidates[i][j]))
     features['x'] = []
     return features
 
@@ -44,8 +59,7 @@ def obtain_examples(phrases, candidates, dags, goldname):
     return instances
 
 
-def obtain_entity_candidates(phrases):
-    size = 5
+def obtain_entity_candidates(phrases, size):
     result = []
 
     for sentence in phrases:
@@ -102,12 +116,15 @@ if __name__ == "__main__":
 
     questions = json.load(open(path+"data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
     labels = pickle.load(open(path +"data" + sep + "questions_" + mode + "_" + str(size) + ".pickle"))
+    phrases = parse_to_phrases(questions, labels)
 
     if 'e' in type:
-        phrases = parse_to_phrases(questions, labels)
         candidates = obtain_entity_candidates(phrases, n_cand)
         pickle.dump(candidates,open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle","wb"))
     if 'r' in type:
         candidates = pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
         rel_candidates = obtain_rel_candidates(candidates)
         pickle.dump(candidates,open(path + "data" + sep + "rel_candidates_" + mode + "_" + str(size) + ".pickle","wb"))
+    if 'f' in type:
+        candidates = pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
+        get_features(phrases,candidates)
