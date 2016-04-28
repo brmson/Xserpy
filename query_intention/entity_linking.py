@@ -44,7 +44,7 @@ def obtain_examples(phrases, candidates, dags, goldname):
     return instances
 
 
-def obtain_candidates(phrases):
+def obtain_entity_candidates(phrases):
     size = 5
     result = []
 
@@ -55,6 +55,15 @@ def obtain_candidates(phrases):
                 cand = query_freebase_entity(phrase[0], 'freebase', size)
                 sent.append(cand)
         result.append(sent)
+    return result
+
+def obtain_rel_candidates(candidates):
+    result = []
+    for c in candidates:
+        if len(c) == 1:
+            result.append([query_freebase_property(C['mid']) for C in c[0]])
+        else:
+            result.append([])
     return result
 
 def obtain_pop_score(entities):
@@ -88,6 +97,7 @@ if __name__ == "__main__":
     path = args.fpath
     n_cand = args.n_cand
     mode = args.mode
+    type = args.type
     size = args.size
 
     questions = json.load(open(path+"data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
@@ -95,7 +105,9 @@ if __name__ == "__main__":
 
     if 'e' in type:
         phrases = parse_to_phrases(questions, labels)
-        candidates = obtain_candidates(phrases, n_cand)
+        candidates = obtain_entity_candidates(phrases, n_cand)
         pickle.dump(candidates,open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle","wb"))
     if 'r' in type:
-        pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
+        candidates = pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
+        rel_candidates = obtain_rel_candidates(candidates)
+        pickle.dump(candidates,open(path + "data" + sep + "rel_candidates_" + mode + "_" + str(size) + ".pickle","wb"))
