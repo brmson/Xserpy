@@ -1,10 +1,16 @@
 import pickle, os, argparse
 
+from sklearn.linear_model import Perceptron
 from nltk.stem.wordnet import WordNetLemmatizer
 
 from query_intention.fb_query import *
 from query_instantiate import Instance, parse_to_phrases, object_decoder, get_db_entities
 
+CANDIDATES = "candidates"
+GOLD = "gold_entities"
+FEATURES = "candidates_features"
+REL_CANDIDATES = "rel_candidates"
+LABELS = "ent_labels"
 
 def obtain_feature(phrase, candidates):
     f = {}
@@ -43,7 +49,55 @@ def obtain_feature(phrase, candidates):
         f[c['mid']] = feature
     return f
 
+def get_feature(phrase, candidates):
+    feature = [0] * 55
+    for i in range(len(candidates)):
+        c = candidates[i]
+        ph = phrase[0][:-1]
+        s = c['name']
+
+        feature[i] = c['score']
+
+        ph_id = ph.replace(' ','_').lower()
+
+        if ph == s:
+            feature[len(candidates) + i] = 1
+        elif s.startswith(ph):
+            feature[len(candidates)*2 + i] = 1
+        elif s.endswith(ph):
+            feature[len(candidates)*3 + i] = 1
+        elif ph in s:
+            feature[len(candidates)*4 + i] = 1
+        overlap = len(s) - len(s.replace(ph, ''))
+        if overlap > 0:
+            feature[len(candidates)*5 + i] = overlap
+
+        if 'id' in c.keys():
+            c_id = c['id'][4:]
+            if ph_id == c_id:
+                feature[len(candidates)*6 + i] = 1
+            elif c_id.startswith(ph_id):
+                feature[len(candidates)*7 + i] = 1
+            elif c_id.endswith(ph_id):
+                feature[len(candidates)*8 + i] = 1
+            elif ph_id in c_id:
+                feature[len(candidates)*9 + i] = 1
+            overlap = len(c_id) - len(c_id.replace(ph_id, ''))
+            if overlap > 0:
+                feature[len(candidates)*10 + i] = 1
+    return feature
+
 def get_features(phrases, candidates):
+    features = []
+    for i in range(len(phrases)):
+        if candidates[i]:
+            P = [p for p in phrases[i] if p[1] == 0]
+            for j in range(len(P)):
+                features.append(get_feature(P[j], candidates[i][j]))
+
+    return features
+
+def obtain_features(phrases, candidates):
     features = {}
     for i in range(len(phrases)):
         for j in range(len(phrases[i])):
@@ -71,33 +125,36 @@ def obtain_entity_candidates(phrases, size):
         result.append(sent)
     return result
 
-def obtain_rel_candidates(candidates):
+def obtain_rel_candidates(candidates, labels):
     result = []
-    for c in candidates:
+    for i in range(len(candidates)):
+        c = candidates[i]
         if len(c) == 1:
-            result.append([query_freebase_property(C['mid']) for C in c[0]])
+            result.append(query_freebase_property(c[0][labels[i]]['mid']))
         else:
             result.append([])
     return result
 
-def obtain_entity_labels(candidates,entities):
+def obtain_entity_labels(candidates, entities):
     labels = []
     for j in range(len(candidates)):
         candidate = candidates[j]
-        label = 5
-        if len(candidate) == 1:
-            entity = entities[j]
-            for e in entity:
-                if e[:3] == 'en.':
-                    gold = '/' + e.replace('.', '/')
-                    for i in range(len(candidate[0])):
-                        c = candidate[0][i]
-                        if 'id' in c.keys():
-                            if c['id'] == gold:
+        entity = entities[j]
+        E = ['/' + f.replace('.', '/') for f in entity if f[:2] == 'm.' or f[:3] == 'en.']
+        if len(candidate) > 0:
+            for c in candidate:
+                label = -1
+                for i in range(len(c)):
+                    C = c[i]
+                    for e in E:
+                        if C['mid'] == e:
+                            label = i
+                            break
+                        if 'id' in C.keys():
+                            if C['id'] == e:
                                 label = i
-                                break
-                    break
-        labels.append(label)
+                            break
+                labels.append(label)
     return labels
 
 def obtain_pop_score(entities):
@@ -140,16 +197,35 @@ if __name__ == "__main__":
 
     if 'e' in type:
         candidates = obtain_entity_candidates(phrases, n_cand)
-        pickle.dump(candidates,open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle","wb"))
+        pickle.dump(candidates,open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle","wb"))
+
     if 'r' in type:
-        candidates = pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
-        rel_candidates = obtain_rel_candidates(candidates)
-        pickle.dump(candidates,open(path + "data" + sep + "rel_candidates_" + mode + "_" + str(size) + ".pickle","wb"))
-    if 'f' in type:
-        candidates = pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
-        get_features(phrases,candidates)
+        candidates = pickle.load(open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
+        labels = pickle.load(open(path + "data" + sep + GOLD + "_" + mode + "_" + str(size) + ".pickle"))
+        rel_candidates = obtain_rel_candidates(candidates, labels)
+        pickle.dump(candidates,open(path + "data" + sep + REL_CANDIDATES + "_" + mode + "_" + str(size) + ".pickle","wb"))
+
     if 'g' in type:
-        candidates = pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
+        candidates = pickle.load(open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
+        # rel = pickle.load(open(path + "data" + sep + REL_CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
         ent, s = get_db_entities(questions)
         labels = obtain_entity_labels(candidates, ent)
-        pickle.dump(candidates,open(path + "data" + sep + "gold_entities_" + mode + "_" + str(size) + ".pickle","wb"))
+        pickle.dump(labels, open(path + "data" + sep + GOLD + "_" + mode + "_" + str(size) + ".pickle","wb"))
+
+    if 'f' in type:
+        candidates = pickle.load(open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
+        labels = pickle.load(open(path + "data" + sep + GOLD + "_" + mode + "_" + str(size) + ".pickle"))
+        features = get_features(phrases,candidates)
+        F = [features[i] for i in range(len(features)) if labels[i] >= 0]
+        L = [label for label in labels if label >= 0]
+        pickle.dump(F,open(path + "data" + sep + FEATURES + "_" + mode + "_" + str(size) + ".pickle","wb"))
+        pickle.dump(L,open(path + "data" + sep + LABELS + "_" + mode + "_" + str(size) + ".pickle","wb"))
+
+    if 't' in type:
+        perc = Perceptron(n_iter=100, verbose=0)
+        y = pickle.load(open(path + "data" + sep + LABELS + "_trn_641.pickle"))
+        X = pickle.load(open(path + "data" + sep + FEATURES + "_trn_641.pickle"))
+        w = perc.fit(X,y)
+        y_tst = pickle.load(open(path + "data" + sep + LABELS + "_tst_276.pickle"))
+        X_tst = pickle.load(open(path + "data" + sep + FEATURES + "_tst_276.pickle"))
+        print perc.score(X_tst,y_tst)
