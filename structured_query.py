@@ -1,4 +1,5 @@
 import pickle
+from SPARQLWrapper import SPARQLWrapper, JSON
 
 def convert_to_queries(dag, phrase):
     # queries = []
@@ -68,6 +69,13 @@ def get_entity_names(dag):
                 result.append(alphabet[index]+" rdfs:label \""+d[3:].replace('_',' ').title()+"\"@en")
                 index += 1
     return result
+
+def query_fb_endpoint(query):
+    sparql = SPARQLWrapper('http://freebase.ailao.eu:3030/freebase/query')
+    sparql.setReturnFormat(JSON)
+    sparql.setQuery(query)
+    return sparql.query().convert()
+
 
 if __name__ == "__main__":
     dags = pickle.load(open("query_gold_0_100.pickle"))
