@@ -40,7 +40,6 @@ def convert_to_queries(dag, phrase):
     return queries
 
 def create_query_file(filename, queries,phr):
-    i = 0
     f = open(filename, "w")
     f.write("PREFIX : <http://rdf.freebase.com/ns/>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n")
     select = "?x"
@@ -56,6 +55,24 @@ def create_query_file(filename, queries,phr):
 
     f.write('}\n')
     f.close()
+
+
+def create_query(queries, phr):
+    f = ''
+    f += "PREFIX : <http://rdf.freebase.com/ns/>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n"
+    select = "?x"
+    if ('when ',3) not in phr and ('how many ',3) not in phr:
+        queries.append('?x rdfs:label ?name .\nFILTER (lang(?name) = \'en\')')
+        select = "?name"
+    if ('how many ',3) in phr:
+        f += "SELECT count(" + select + ") {\n"
+    else:
+        f += "SELECT " + select + " {\n"
+    for q in queries:
+        f += q + ' . \n'
+    f += '}\n'
+    return f
+
 
 def get_entity_names(dag):
     alphabet = ['?a','?b','?c','?d','?e','?f','?g','?h','?i']
