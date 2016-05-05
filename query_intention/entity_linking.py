@@ -1,10 +1,11 @@
 import pickle, os, argparse
+from gevent.greenlet import _dummy_event
 
 from sklearn.linear_model import Perceptron
 from nltk.stem.wordnet import WordNetLemmatizer
 
 from query_intention.fb_query import *
-from query_instantiate import Instance, parse_to_phrases, object_decoder, get_db_entities
+from query_instantiate import Instance, parse_to_phrases, parse_dags, object_decoder, get_db_entities
 
 CANDIDATES = "candidates"
 GOLD = "gold_entities"
@@ -172,6 +173,46 @@ def obtain_pop_score(entities):
                 scores['en.' + id] = f['score']
     return scores
 
+def get_edge_features(phrase, dag, k, j):
+    # k: edge target
+    # j: edge start
+    q_type = ['who ', 'what ', 'when ', 'where ', 'how many ', 'where ']
+    q_var = [V for V in phrase if V[1] == 3][0][0]
+    f6_11 = [0] * len(q_type)
+    if q_var in q_type:
+        f6_11[q_type.index(q_var)] = 1
+    ents = len([P for P in phrase if P[1] == 0])
+    f1 = len(dag[j])
+    f2 = ents
+    f3 = phrase[j][1]
+    f4 = phrase[k][1]
+    f5 = len([item for sublist in dag for item in sublist])
+    return [f1, f2, f3, f4, f5] + f6_11
+
+
+def edge_gold_standard(phrases, dags):
+    start = 0
+    result = []
+    features = []
+    for i in range(start, 100):# range(len(dags)):
+        phrase = phrases[i]
+        dag = dags[i]
+
+        for j in range(len(dag)):
+            d = dag[j]
+            if len(d) > 0:
+                p = phrase[j]
+                print p[0]
+                for k in d:
+                    features.append(get_edge_features(phrase, dag, k, j))
+                    inp = raw_input(phrase[k][0] + " ")
+                    result.append(int(inp))
+        if i % 10 == 0:
+            pickle.dump(features,open("partial_features.pickle","wb"))
+            pickle.dump(result,open("partial_labels.pickle","wb"))
+    return result, features
+
+
 def lemmatize_word(text):
     lmtzr = WordNetLemmatizer()
     return [lmtzr.lemmatize(t,'v') for t in text]
@@ -221,6 +262,10 @@ if __name__ == "__main__":
         pickle.dump(F,open(path + "data" + sep + FEATURES + "_" + mode + "_" + str(size) + ".pickle","wb"))
         pickle.dump(L,open(path + "data" + sep + LABELS + "_" + mode + "_" + str(size) + ".pickle","wb"))
 
+    if 'l' in type:
+        dags = parse_dags(phrases)
+        e = edge_gold_standard(phrases, dags)
+
     if 't' in type:
         perc = Perceptron(n_iter=100, verbose=0)
         y = pickle.load(open(path + "data" + sep + LABELS + "_trn_641.pickle"))
@@ -228,4 +273,13 @@ if __name__ == "__main__":
         w = perc.fit(X,y)
         y_tst = pickle.load(open(path + "data" + sep + LABELS + "_tst_276.pickle"))
         X_tst = pickle.load(open(path + "data" + sep + FEATURES + "_tst_276.pickle"))
+        print perc.score(X_tst,y_tst)
+        
+    if 'd' in type:
+        perc = Perceptron(n_iter=100, verbose=0)
+        y = pickle.load(open(path + "query_intention" + sep + "edge_labels_100.pickle"))
+        X = pickle.load(open(path + "query_intention" + sep + "edge_features_100.pickle"))
+        w = perc.fit(X,y)
+        y_tst = pickle.load(open(path + "query_intention" + sep + "edge_labels_tst_100.pickle"))
+        X_tst = pickle.load(open(path + "query_intention" + sep + "edge_features_tst_100.pickle"))
         print perc.score(X_tst,y_tst)
