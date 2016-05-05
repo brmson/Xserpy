@@ -11,7 +11,10 @@ def convert_question(phrase, dag, qint, question, features, pos_tagged):
     phrases = []
 
     for U in features:
-        phrases.append(predict(phrase, U, 4))
+        label = predict(phrase, U, 4)
+        if label == 2:
+            label = 4
+        phrases.append(label)
     phr, pos = shift_reduce.parse_to_phrases([question], [phrases], [pos_tagged])
 
     DAG = shift_reduce.shift_reduce(phr[0], pos[0], dag, 50).dag
@@ -46,9 +49,10 @@ if __name__ == "__main__":
     pos = pickle.load(open("data" + sep + "pos_tagged_" + mode + ".pickle"))
     questions = json.load(open(path+"data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
     features = pickle.load(open(path + "data" + sep + "phrase_detect_features_" + mode + "_" + str(size) + "_arr.pickle"))
-    model_phrase = pickle.load(open(path+"models" + sep + "w_" + str(size) + "_" + str(n_iter) + ".pickle"))
+    model_phrase = pickle.load(open(path+"models" + sep + "w_" + str(size) + "_i" + str(n_iter) + ".pickle"))
     model_dag = pickle.load(open(path+"models" + sep + "w_dag" + str(size) + "_i" + str(n_iter_dag) + ".pickle"))
-    model_qint = pickle.load(open(path+"models" + sep + "w_qint.pickle"))
+    # model_qint = pickle.load(open(path+"models" + sep + "w_qint.pickle"))
 
+    U = sum([len(q.utterance.split()) for q in questions[:i]])
     u = len(questions[i].utterance.split())
-    convert_question(model_phrase, model_dag, model_qint, questions[i], features[i:i+u], pos[i])
+    convert_question(model_phrase, model_dag, None, questions[i], features[U:U+u], pos[i])
