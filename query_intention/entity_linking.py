@@ -1,7 +1,8 @@
 import pickle, os, argparse
-from gevent.greenlet import _dummy_event
 
-from sklearn.linear_model import Perceptron
+from sklearn.linear_model import Perceptron, LogisticRegression
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.naive_bayes import BernoulliNB
 from nltk.stem.wordnet import WordNetLemmatizer
 
 from query_intention.fb_query import *
@@ -226,15 +227,26 @@ def label_edges(phrase, dag, perc, j):
 def label_entity(phrase, perc, candidate):
     feature = get_feature(phrase, candidate)
     label = perc.predict(feature)
-    return candidate[label]['mid'].replace('/','.')[1:]
+    if label < len(candidate):
+        return candidate[label]['mid'].replace('/','.')[1:]
+    else:
+        return candidate[0]['mid'].replace('/','.')[1:]
 
-def label_relation(phrase, dag, perc, j):
-    pass
+def label_relation(phrase, rel_lr, bow_dct, g_dct):
+    r_bow, v_bow = get_idx(phrase, bow_dct)
+    features = construct_entity_features([r_bow],[v_bow], len(bow_dct))[0]
+    label = rel_lr.predict(features)[0]
+    for k in g_dct.keys():
+        if label == g_dct[k]:
+            return k
+    return 'relation'
 
 
-def label_all(phrase, dag, candidates, ent_path, ed_path):
+def label_all(phrase, dag, candidates, ent_path, ed_path, rel_path, bow_path, g_path):
     ent_perc = pickle.load(open(ent_path))
-    rel_perc = None
+    rel_lr = pickle.load(open(rel_path))
+    bow_dct = pickle.load(open(bow_path))
+    g_dct = pickle.load(open(g_path))
     edge_perc = pickle.load(open(ed_path))
     result = []
     for i in range(len(phrase)):
@@ -245,12 +257,82 @@ def label_all(phrase, dag, candidates, ent_path, ed_path):
             result.append(label_entity(phrase[i], ent_perc, candidates[e]))
             e += 1
         elif phrase[i][1] == 1:
-            result.append('relation')
+            result.append(label_relation(phrase, rel_lr, bow_dct, g_dct))
         if dag[i]:
             result += label_edges(phrase, dag, edge_perc, i)
         else:
             result += ['x'] * (len(phrase))
     return result
+
+def get_bow(phrases, ent):
+    q_type = ['who ', 'what ', 'when ', 'where ', 'how many ', 'where ']
+    v_bow = []
+    bow_dct = {}
+    g_dct = {}
+    gold = []
+    r_bow = []
+    i = 0
+    k = 0
+    for j in range(len(phrases)):
+        phrase = phrases[j]
+        ents = ent[j]
+        g = [pp for pp in ents if pp[:3] != 'en.' and pp[:2] != 'm.']
+        v = [pp for pp in phrase if pp[1] == 3]
+        r = [pp for pp in phrase if pp[1] == 1]
+        if len(v) > 0:
+            p = v[0]
+            if p[0] in q_type:
+                v_bow.append(q_type.index(p[0]))
+            else:
+                v_bow.append(len(q_type))
+        else:
+            v_bow.append(-1)
+        if len(r) > 0:
+            rr = []
+            for R in r[0][0].split():
+                if R not in bow_dct.keys():
+                    bow_dct[R] = i
+                    i += 1
+                rr.append(bow_dct[R])
+            r_bow.append(rr)
+        for G in g:
+            if G not in g_dct.keys():
+                g_dct[G] = k
+                k += 1
+        gold.append(g_dct[g[-1]])
+    return bow_dct, v_bow, r_bow, gold, g_dct
+
+def construct_entity_features(r_bow, v_bow, length):
+    features = []
+    for i in range(len(r_bow)):
+        feature = [0] * (length + 7)
+        r = r_bow[i]
+        v = v_bow[i]
+        if v >= 0:
+            feature[v] = 1
+        for R in r:
+            feature[R + 6] = 1
+        features.append(feature)
+    return features
+
+def get_idx(phrase, bow_dct):
+    q_type = ['who ', 'what ', 'when ', 'where ', 'how many ', 'where ']
+    v = [pp for pp in phrase if pp[1] == 3]
+    r = [pp for pp in phrase if pp[1] == 1]
+    if len(r) > 0:
+        rr = []
+        for R in r[0][0].split():
+            if R in bow_dct.keys():
+                rr.append(bow_dct[R])
+    if len(v) > 0:
+        p = v[0]
+        if p[0] in q_type:
+            vv = q_type.index(p[0])
+        else:
+            vv = len(q_type)
+    else:
+        vv = -1
+    return rr, vv
 
 if __name__ == "__main__":
     sep = os.path.sep
@@ -272,8 +354,16 @@ if __name__ == "__main__":
     phrases = parse_to_phrases(questions, labels)
 
     if 'e' in type:
-        candidates = obtain_entity_candidates(phrases, n_cand)
-        pickle.dump(candidates,open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle","wb"))
+        ent, s = get_db_entities(questions)
+        bow_dct, v_bow, r_bow, y, g_dct = get_bow(phrases, ent)
+        length = len(bow_dct.keys())
+        X = construct_entity_features(r_bow, v_bow, length)
+        csf = OneVsRestClassifier(LogisticRegression(verbose=0, max_iter=100))
+        csf.fit(X, y)
+        # candidates = obtain_entity_candidates(phrases, n_cand)
+        pickle.dump(csf,open("relation_lr_" + mode + "_" + str(size) + ".pickle","wb"))
+        pickle.dump(bow_dct,open("bow_dict_" + mode + "_" + str(size) + ".pickle","wb"))
+        pickle.dump(g_dct,open("gold_dict_" + mode + "_" + str(size) + ".pickle","wb"))
 
     if 'r' in type:
         candidates = pickle.load(open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
