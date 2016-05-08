@@ -1,13 +1,47 @@
 import pickle
 
 from phrase_detection.phrase_detector import predict
+from phrase_detection.feature_constructor import pos_tag, ner_tag, Question, construct_feature
 from annotate.annotator import object_decoder, json
 import structured_query as sq, os, argparse
 from shift_reduce import shift_reduce as sr
 from query_intention import query_instantiate, entity_linking as el
 
+def convert_free_question(question):
+    pd_model = None
+    dag_model = None
 
-def convert_question(phrase, dag, qint, question, features, pos_tagged):
+    q = Question(question, "")
+    utterance = question.split()
+
+    labels = []
+    pos = pos_tag([q])
+    ner = ner_tag([q])
+    l = 4
+
+    u = ["", ""]+utterance.split()+["", ""]
+    p = ['', '']+[pp[1] for pp in pos[0]]+['', '']
+    n = ['', '']+[nn[1] for nn in ner[0]]+['', '']
+
+    for j in range(2, len(u)-2):
+        feature = construct_feature(p, u, n, j, l)
+        label = predict(pd_model, feature, 4)
+        labels.append(label)
+        l = label
+
+    phr, pos = sr.parse_to_phrases([question], [labels], pos)
+
+    DAG = sr.shift_reduce(phr[0], pos[0], dag_model, 50).dag
+
+    candidates = el.obtain_entity_candidates(phr, 5)
+    ent_path = "query_intention\\ent_perceptron_trn_641.pickle"
+    edge_path = "query_intention\\edge_perceptron_trn_100.pickle"
+    rel_path = "query_intention\\relation_lr_trn_641.pickle"
+    bow_path = "query_intention\\bow_dict_trn_641.pickle"
+    g_path = "query_intention\\gold_dict_trn_641.pickle"
+    intent = el.label_all(phr[0], DAG, candidates, ent_path, edge_path, rel_path, bow_path, g_path)
+
+def convert_question(phrase, dag, candidates, question, features, pos_tagged, filename):
     phrases = []
 
     for U in features:
@@ -19,15 +53,47 @@ def convert_question(phrase, dag, qint, question, features, pos_tagged):
 
     DAG = sr.shift_reduce(phr[0], pos[0], dag, 50).dag
 
-    # examples, features = query_instantiate.create_examples([question], phr, [DAG])
-    # rel_entities, simple = query_instantiate.get_db_entities([question])
-    # relations, entities = query_instantiate.get_entities_relations(rel_entities)
+    ent_path = "query_intention\\ent_perceptron_trn_641.pickle"
+    edge_path = "query_intention\\edge_perceptron_trn_100.pickle"
+    rel_path = "query_intention\\relation_lr_trn_641.pickle"
+    bow_path = "query_intention\\bow_dict_trn_641.pickle"
+    g_path = "query_intention\\gold_dict_trn_641.pickle"
 
-    # intent = query_instantiate.beam_search(examples[0], 30, ['x']+relations, qint, training=False)
-    intent = el.label_all(phr[0], DAG, qint, "query_intention\\ent_perceptron_trn_641.pickle", "query_intention\\edge_perceptron_trn_100.pickle")
+    intent = el.label_all(phr[0], DAG, candidates, ent_path, edge_path, rel_path, bow_path, g_path)
+    queries = sq.convert_to_queries(intent, phr[0])
+    sq.create_query_file(filename, queries, phr[0])
+    # query =  sq.create_query(queries)
+    # return sq.query_fb_endpoint(query)
 
-    # structured_query.create_query_file("query.txt", structured_query.convert_to_queries(intent, phr[0]), phr)
-    print sq.create_query(sq.convert_to_queries(intent, phr[0]), phr)
+def process_answer(answer, gold_answer):
+    partial = False
+    correct = False
+
+    vrs = answer['head']['vars']
+    bindings = answer['results']['bindings']
+    # datatypes = [a[vrs[0]]['datatype'] for a in bindings]
+    types = [a[vrs[0]]['type'] for a in bindings]
+    values = [a[vrs[0]]['value'] for a in bindings]
+
+    gold = [g[1:].split() for g in gold_answer]
+    for gg in gold:
+        for G in gg:
+            if G[0] == "\"":
+                g_index = gg.index(G)
+                for GG in gg[g_index+1:]:
+                    gg[g_index] += " " + GG
+                    gg.remove(GG)
+    c = 0
+    for value in values:
+        if ' ' in value:
+            value = "\"" + value + "\""
+        for g in gold:
+            if value in g:
+                partial = True
+                c += 1
+        if c == len(values):
+            correct = True
+    return correct or partial
 
 if __name__ == "__main__":
 
@@ -54,8 +120,14 @@ if __name__ == "__main__":
     model_phrase = pickle.load(open(path+"models" + sep + "w_" + str(size) + "_i" + str(n_iter) + ".pickle"))
     model_dag = pickle.load(open(path+"models" + sep + "w_dag" + str(size) + "_i" + str(n_iter_dag) + ".pickle"))
     candidates = pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
-    # model_qint = pickle.load(open(path+"models" + sep + "w_qint.pickle"))
+    gold_answers = [(line + " ").split(') ') for line in open('data' + sep + 'free917_' + mode +'_answers.txt')]
 
-    U = sum([len(q.utterance.split()) for q in questions[:i]])
-    u = len(questions[i].utterance.split())
-    convert_question(model_phrase, model_dag, candidates[i], questions[i], features[U:U+u], pos[i])
+    for i in range(len(questions)):
+        U = sum([len(q.utterance.split()) for q in questions[:i]])
+        u = len(questions[i].utterance.split())
+        try:
+            print i + 1
+            answer = convert_question(model_phrase, model_dag, candidates[i], questions[i], features[U:U+u], pos[i], 'queries' + sep + mode + "_" + str(i+1)+".sparql")
+            # print process_answer(answer, gold_answers[i])
+        except Exception:
+            print "err: " + str(i + 1)
