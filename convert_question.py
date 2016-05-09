@@ -61,9 +61,12 @@ def convert_question(phrase, dag, candidates, question, features, pos_tagged, fi
 
     intent = el.label_all(phr[0], DAG, candidates, ent_path, edge_path, rel_path, bow_path, g_path)
     queries = sq.convert_to_queries(intent, phr[0])
-    sq.create_query_file(filename, queries, phr[0])
-    # query =  sq.create_query(queries)
-    # return sq.query_fb_endpoint(query)
+    # sq.create_query_file(filename, queries, phr[0])
+    if len(queries) > 0:
+        query = sq.create_query(queries, phr[0])
+    else:
+        query = "SELECT ?a WHERE {}"
+    return sq.query_fb_endpoint(query)
 
 def process_answer(answer, gold_answer):
     partial = False
@@ -72,10 +75,14 @@ def process_answer(answer, gold_answer):
     vrs = answer['head']['vars']
     bindings = answer['results']['bindings']
     # datatypes = [a[vrs[0]]['datatype'] for a in bindings]
+    if len(bindings) == 0:
+        return False
+    if len(bindings[0].keys()) == 0:
+        return False
     types = [a[vrs[0]]['type'] for a in bindings]
     values = [a[vrs[0]]['value'] for a in bindings]
 
-    gold = [g[1:].split() for g in gold_answer]
+    gold = [g[1:-3].split() for g in gold_answer]
     for gg in gold:
         for G in gg:
             if G[0] == "\"":
@@ -88,7 +95,14 @@ def process_answer(answer, gold_answer):
         if ' ' in value:
             value = "\"" + value + "\""
         for g in gold:
-            if value in g:
+            if g[0] == 'date':
+                v = value.split('-')
+                if g[2][0] == '-':
+                    partial = v[0] == g[1]
+                else:
+                    partial = v == g[1:]
+                c += int(partial)
+            elif value in g:
                 partial = True
                 c += 1
         if c == len(values):
@@ -117,17 +131,20 @@ if __name__ == "__main__":
     pos = pickle.load(open("data" + sep + "pos_tagged_" + mode + ".pickle"))
     questions = json.load(open(path+"data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
     features = pickle.load(open(path + "data" + sep + "phrase_detect_features_" + mode + "_" + str(size) + "_arr.pickle"))
-    model_phrase = pickle.load(open(path+"models" + sep + "w_" + str(size) + "_i" + str(n_iter) + ".pickle"))
-    model_dag = pickle.load(open(path+"models" + sep + "w_dag" + str(size) + "_i" + str(n_iter_dag) + ".pickle"))
+    model_phrase = pickle.load(open(path+"models" + sep + "w_641_i" + str(n_iter) + ".pickle"))
+    model_dag = pickle.load(open(path+"models" + sep + "w_dag641_i" + str(n_iter_dag) + ".pickle"))
     candidates = pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
     gold_answers = [(line + " ").split(') ') for line in open('data' + sep + 'free917_' + mode +'_answers.txt')]
-
+    correct = 0
     for i in range(len(questions)):
+        print str(i+1)
         U = sum([len(q.utterance.split()) for q in questions[:i]])
         u = len(questions[i].utterance.split())
         try:
-            print i + 1
             answer = convert_question(model_phrase, model_dag, candidates[i], questions[i], features[U:U+u], pos[i], 'queries' + sep + mode + "_" + str(i+1)+".sparql")
-            # print process_answer(answer, gold_answers[i])
-        except Exception:
-            print "err: " + str(i + 1)
+            if process_answer(answer, gold_answers[i]):
+                correct += 1
+                print str(correct) + "/" + str(i+1)
+        except Exception, e:
+            print repr(e)
+    print correct
