@@ -4,7 +4,7 @@ import random
 import argparse
 import os
 
-from annotate.annotator import object_decoder, parse_phrases, parse_dags
+from annotate.annotator import object_decoder, parse_to_phrases, parse_dags
 from phrase_detection.phrase_detector import compute_score
 
 
@@ -116,7 +116,7 @@ def get_db_entities(questions):
         result.append(strings)
         if len(temp) == 8:
             simple.append(q)
-    return (result, simple)
+    return result, simple
 
 def get_entities_relations(entities):
     all = [item for sublist in entities for item in sublist]
@@ -265,27 +265,27 @@ if __name__ == "__main__":
     end = args.end
     goldname = args.gold
 
-    questions = json.load(open(path+"data" + sep + "free917.train.examples.canonicalized.json"), object_hook=object_decoder)[:100]
+    questions = json.load(open(path+"data" + sep + "free917.trn.examples.canonicalized.json"), object_hook=object_decoder)[:100]
     labels = pickle.load(open(path +"data" + sep + "questions_trn_100.pickle"))
 
-    phrases = parse_phrases(questions, labels)
+    phrases = parse_to_phrases(questions, labels)
     # candidates = obtain_pop_score(phrases) # pickle.load(open("candidates_trn_100.pickle"))#
     # pickle.dump(candidates,open("scores_trn_100.pickle","wb"))
 
     if 't' in args.type:
-        phrases = parse_phrases(questions, labels)
+        phrases = parse_to_phrases(questions, labels)
         dags = parse_dags(phrases)
         rel_entities, simple = get_db_entities(questions)
         relations, entities = get_entities_relations(rel_entities)
         examples, features = create_examples(questions, phrases, dags, goldname)
-        # features = get_features(phrases, candidates)
+        # features = obtain_features(phrases, candidates)
         # examples = obtain_examples(phrases, candidates, dags, goldname)
         W = train_with_beam(args.n_iter, examples, init_weights(features, {}), args.size, ['SP','SC','PO','x'], features)
         #pickle.dump(W, open(path+"models" + sep + "w_qint_" + str(args.size) + "_i" + str(args.n_iter) + "_ffs.pickle", "wb"))
     else:
         questions = questions[start:end]
         labels = labels[start:end]
-        phrases = parse_phrases(questions, labels)
+        phrases = parse_to_phrases(questions, labels)
         dags = parse_dags(phrases)
         rel_entities, simple = get_db_entities(questions)
         gold = gold_standard(phrases, dags, rel_entities)
