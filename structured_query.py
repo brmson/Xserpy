@@ -2,8 +2,6 @@ import pickle
 from SPARQLWrapper import SPARQLWrapper, JSON
 
 def convert_to_queries(dag, phrase):
-    # queries = []
-    dag[0] = '?x'
     queries = get_entity_names(dag)
     for d in range(len(dag)):
         if '?' not in dag[d]:
@@ -69,7 +67,11 @@ def create_query(queries, phr):
     else:
         f += "SELECT " + select + " {\n"
     for q in queries:
-        f += q + ' . \n'
+        Q = q.split()
+        if Q[1] != Q[2]:
+            f += q + ' . \n'
+        else:
+            break
     f += '}\n'
     return f
 
