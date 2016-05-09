@@ -229,8 +229,10 @@ def label_entity(phrase, perc, candidate):
     label = perc.predict(feature)
     if label < len(candidate):
         return candidate[label]['mid'].replace('/','.')[1:]
-    else:
+    elif len(candidate) > 0:
         return candidate[0]['mid'].replace('/','.')[1:]
+    else:
+        return ''
 
 def label_relation(phrase, rel_lr, bow_dct, g_dct):
     r_bow, v_bow = get_idx(phrase, bow_dct)
