@@ -4,12 +4,11 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 
 def query_freebase_entity(query, scoring, size):
     api_key = open(".api_key").read()
-    service_url = 'https://www.googleapis.com/freebase/v1/search'
+    # service_url = 'https://www.googleapis.com/freebase/v1/search'
+    service_url = 'https://kgsearch.googleapis.com/v1/entities:search'
     params = {
             'query': query,
-            'key': api_key,
-            'scoring': scoring,
-            'lang' : 'en'
+            'key': api_key
     }
     url = service_url + '?' + urllib.urlencode(params)
     response = json.loads(urllib.urlopen(url).read())
@@ -42,7 +41,7 @@ def query_fb_property_sparql(mid):
     return [r['x']['value'][27:] for r in results]
 
 if __name__ == "__main__":
-    entity = query_freebase_entity("Beyonce",'freebase', 5)[0]
+    entity = query_freebase_entity("Danny DeVito",'freebase', 5)[0]
     candidates = query_fb_property_sparql(entity['mid'])
     for c in candidates:
         print c
