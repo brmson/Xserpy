@@ -192,10 +192,10 @@ def get_edge_features(phrase, dag, k, j):
     # k: edge target
     # j: edge start
     q_type = ['who ', 'what ', 'when ', 'where ', 'how many ', 'where ']
-    q_var = [V for V in phrase if V[1] == 3][0][0]
+    q_var = [V for V in phrase if V[1] == 3]
     f6_11 = [0] * len(q_type)
-    if q_var in q_type:
-        f6_11[q_type.index(q_var)] = 1
+    if q_var in q_type and len(q_var > 0):
+        f6_11[q_type.index(q_var[0][0])] = 1
     ents = len([P for P in phrase if P[1] == 0])
     f1 = len(dag[j])
     f2 = ents
@@ -271,8 +271,11 @@ def label_all(phrase, dag, candidates, ent_path, ed_path, rel_path, bow_path, g_
         if phrase[i][1] == 3:
             result.append('?x')
         elif phrase[i][1] == 0:
-            result.append(label_entity(phrase[i], ent_perc, candidates[e]))
-            e += 1
+            if len(candidates) > 0:
+                result.append(label_entity(phrase[i], ent_perc, candidates[e]))
+                e += 1
+            else:
+                result.append('x')
         elif phrase[i][1] == 1:
             result.append(label_relation(phrase, rel_lr, bow_dct, g_dct))
         if dag[i]:
@@ -350,6 +353,65 @@ def get_idx(phrase, bow_dct):
     else:
         vv = -1
     return rr, vv
+
+def parse_log_formula(q):
+    gold = []
+    formula = q.targetFormula
+    if formula[:6] == '(count':
+        formula = formula[7:-1]
+    formula = formula[1:-1]
+    i = 0
+    while formula[i] != ' ':
+        i += 1
+    variable = formula[:i]
+    condition = formula[i+1:]
+    if len(variable.split()) == 1 and len(condition.split()) == 1:
+        first = 'PO'
+        second = 'SP'
+        if variable[0] != '!':
+            first = 'SP'
+            second = 'PO'
+        gold = ['?x', 'x', 'x', 'x', variable[4:], first, 'x', second, condition[3:], 'x', 'x', 'x']
+    elif condition[:8] == '((lambda':
+        cond = condition.split()
+        edge = cond[2][5:]
+        ent =  cond[-1][3:-1]
+        if cond[2][1] == '!':
+            gold = ['?x', 'x', 'x', 'x', '?cvt', variable[4:], 'x', 'x', ent, 'x', edge, 'x']
+        else:
+            gold = ['?x', 'x', 'x', 'x', '?cvt', variable[4:], 'x', edge, ent, 'x', 'x', 'x']
+    elif condition[:4] == '(and':
+        condition = condition[5:-1]
+        if condition[:8] == '((lambda':
+            cond = condition.split('((lambda x ')[1:]
+            gold = ['?x', 'x', 'x'] + (['x'] * len(cond)) + ['?cvt', variable[4:], 'x']
+            ents = []
+            for c in cond:
+                C = c.split()
+                if not 'date' in c:
+                    gold += [C[0][4:]]
+                    ents += [C[-1][3:-1]] + ['x'] * (2 + len(cond))
+                else:
+                    gold += [C[0][4:]]
+                    if '-1' in c:
+                        ents += ['\"' + C[-3] + '\"^^xsd:gYear'] + ['x'] * (2 + len(cond))
+                    else:
+                        return []
+            gold += ents
+        else:
+            return []
+    else:
+        cond = condition.split()
+        if cond[0][1] == '!':
+            edge = cond[0][5:]
+            ent = cond[1][3:-1]
+            gold = ['?x', 'x', 'x', 'x', '?cvt', variable[4:], 'x', 'x', ent, 'x', edge, 'x']
+        else:
+            if cond[0][:3] == 'fb:':
+                gold = [cond[2][3:-1], 'x', 'x', 'x', cond[1][4:], 'PO', 'x', 'SP', cond[0][3:], 'x', 'x', 'x']
+            elif cond[0] == '(number':
+                gold = ['?x', 'x', 'x', 'x', variable[3:], 'SP', 'x', 'PO', cond[1][:-2], 'x', 'x', 'x']
+    return gold
 
 if __name__ == "__main__":
     sep = os.path.sep
@@ -435,3 +497,11 @@ if __name__ == "__main__":
         for i in range(len(phrases)):
             mapped.append(label_all(phrases[i], dags[i], candidates[i], "ent_perceptron_trn_641.pickle", "edge_perceptron_trn_100.pickle"))
         pickle.dump(mapped, open("emapped.pickle","wb"))
+
+    if 'q' in type:
+        counter = 0
+        for q in questions:
+            form = parse_log_formula(q)
+            if len(form) > 0:
+                counter += 1
+        print counter
