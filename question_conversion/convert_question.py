@@ -50,14 +50,13 @@ def convert_question(phrase, dag, candidates, question, features, pos_tagged, fi
             label = 4
         phrases.append(label)
     phr, pos = sr.parse_to_phrases([question], [phrases], [pos_tagged])
-
     DAG = sr.shift_reduce(phr[0], pos[0], dag, 50).dag
 
-    ent_path = "query_intention\\ent_perceptron_trn_641.pickle"
+    ent_path = "query_intention\\ent_lr_trn_641.pickle"
     edge_path = "query_intention\\edge_perceptron_trn_100.pickle"
-    rel_path = "query_intention\\relation_lr_trn_641.pickle"
-    bow_path = "query_intention\\bow_dict_trn_641.pickle"
-    g_path = "query_intention\\gold_dict_trn_641.pickle"
+    rel_path = "query_intention\\relation_lr_tst_276.pickle"
+    bow_path = "query_intention\\bow_dict_tst_276.pickle"
+    g_path = "query_intention\\gold_dict_tst_276.pickle"
 
     intent = el.label_all(phr[0], DAG, candidates, ent_path, edge_path, rel_path, bow_path, g_path)
     queries = sq.convert_to_queries(intent, phr[0])
@@ -76,9 +75,15 @@ def process_answer(answer, gold_answer):
     bindings = answer['results']['bindings']
     # datatypes = [a[vrs[0]]['datatype'] for a in bindings]
     if len(bindings) == 0:
-        return False
+        if gold_answer[0] == '\n ':
+            return True
+        else:
+            return False
     if len(bindings[0].keys()) == 0:
-        return False
+        if gold_answer[0] == '\n ':
+            return True
+        else:
+            return False
     types = [a[vrs[0]]['type'] for a in bindings]
     values = [a[vrs[0]]['value'] for a in bindings]
 
@@ -147,4 +152,4 @@ if __name__ == "__main__":
                 print str(correct) + "/" + str(i+1)
         except Exception, e:
             print repr(e)
-    print correct
+    print correct # 66 tst
