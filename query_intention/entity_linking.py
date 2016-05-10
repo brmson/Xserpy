@@ -136,25 +136,40 @@ def obtain_rel_candidates(candidates, labels):
             result.append([])
     return result
 
-def obtain_entity_labels(candidates, entities):
+def obtain_entity_labels(candidates, entities, phrases):
     labels = []
     for j in range(len(candidates)):
         candidate = candidates[j]
         entity = entities[j]
+        phrase = phrases[j]
+        p = [phr[0][:-1] for phr in phrase if phr[1] == 0]
         E = ['/' + f.replace('.', '/') for f in entity if f[:2] == 'm.' or f[:3] == 'en.']
         if len(candidate) > 0:
-            for c in candidate:
+            for k in range(len(candidate)):
+                c = candidate[k]
+                name = p[k]
                 label = -1
+                found = False
                 for i in range(len(c)):
                     C = c[i]
                     for e in E:
                         if C['mid'] == e:
                             label = i
+                            found = True
                             break
-                        if 'id' in C.keys():
+                        elif 'id' in C.keys():
                             if C['id'] == e:
                                 label = i
-                            break
+                                found = True
+                                break
+                        elif 'name' in C.keys():
+                            pass
+                            if C['name'] == name:
+                                label = i
+                                found = True
+                                break
+                    if found:
+                        break
                 labels.append(label)
     return labels
 
@@ -226,7 +241,7 @@ def label_edges(phrase, dag, perc, j):
 
 def label_entity(phrase, perc, candidate):
     feature = get_feature(phrase, candidate)
-    label = perc.predict(feature)
+    label = perc.predict(feature)[0]
     if label < len(candidate):
         return candidate[label]['mid'].replace('/','.')[1:]
     elif len(candidate) > 0:
@@ -375,9 +390,9 @@ if __name__ == "__main__":
 
     if 'g' in type:
         candidates = pickle.load(open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
-        # rel = pickle.load(open(path + "data" + sep + REL_CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
         ent, s = get_db_entities(questions)
-        labels = obtain_entity_labels(candidates, ent)
+        labels = obtain_entity_labels(candidates, ent, phrases)
+        # print labels.count(-1)
         pickle.dump(labels, open(path + "data" + sep + GOLD + "_" + mode + "_" + str(size) + ".pickle","wb"))
 
     if 'f' in type:
@@ -394,11 +409,11 @@ if __name__ == "__main__":
         e = edge_gold_standard(phrases, dags)
 
     if 't' in type:
-        perc = Perceptron(n_iter=100, verbose=0)
+        perc = OneVsRestClassifier(LogisticRegression(verbose=0, max_iter=50)) # Perceptron(n_iter=50, verbose=0)
         y = pickle.load(open(path + "data" + sep + LABELS + "_trn_641.pickle"))
         X = pickle.load(open(path + "data" + sep + FEATURES + "_trn_641.pickle"))
         w = perc.fit(X,y)
-        pickle.dump(w, open("ent_perceptron_trn_641.pickle","wb"))
+        pickle.dump(w, open("ent_lr_trn_641.pickle","wb"))
         y_tst = pickle.load(open(path + "data" + sep + LABELS + "_tst_276.pickle"))
         X_tst = pickle.load(open(path + "data" + sep + FEATURES + "_tst_276.pickle"))
         print perc.score(X_tst,y_tst)
