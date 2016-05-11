@@ -27,18 +27,23 @@ def annotate_questions_dag(phrases):
 
 def annotate_questions_label(questions, start):
     labeled = []
+    i = 0
     dic = {'e': 0, 'r': 1, 'c': 2, 'v': 3, 'n': 4}
-    for q in questions[start:start+20]:
+    for q in questions[start:]:
         print q.utterance
         L = []
         l = q.utterance.split()
         for word in l:
             inp = raw_input(word+" ")
             while inp not in dic.keys():
-                inp = raw_input("oprava: ")
+                inp = raw_input("correction: ")
             label = dic[inp]
             L.append(label)
         labeled.append(L)
+        i += 1
+        if i % 10 == 0:
+            pickle.dump(labeled, open("questions_test_partial.pickle", "wb"))
+            print i
     pickle.dump(labeled, open("questions_test_"+str(start+1)+"_"+str(start+20)+".pickle", "wb"))
 
 def bootstrap(questions, features, labels, step, n_iter, start):
