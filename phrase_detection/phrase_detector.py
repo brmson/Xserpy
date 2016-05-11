@@ -50,7 +50,7 @@ def compute_error(features, labels, weights):
         guess = predict(weights, features[i],5)
         if guess != label:
             error += 1.0
-    print error/len(features)
+    print 1.0 - error/len(features)
 
 if __name__ == "__main__":
     sep = os.path.sep
@@ -75,6 +75,13 @@ if __name__ == "__main__":
         empty_weights = init_weights(examples, {}, 5)
         pickle.dump(examples, open(path + "data" + sep + "phr_detect_examples_" + mode + "_" + str(args.size) + ".pickle","wb"))
         pickle.dump(empty_weights, open(path + "data" + sep + "empty_weights_" + mode + "_" + str(args.size) + ".pickle","wb"))
+
+    if 'e' in args.type:
+        features = pickle.load(open(path + "data" + sep + "phrase_detect_features_tst_276_arr.pickle"))
+        weights = pickle.load(open(path + "models" + sep + "w_641_i" + str(args.n_iter) + ".pickle"))
+        labels = pickle.load(open(path + "data" + sep + "labels_tst_276.pickle"))
+        compute_error(features, labels, weights)
+
     else:
         examples = pickle.load(open(path + "data" + sep + "phr_detect_examples_" + mode + "_" + str(args.size) + ".pickle"))
         weights = pickle.load(open(path + "data" + sep + "empty_weights_" + mode + "_" + str(args.size) + ".pickle"))
