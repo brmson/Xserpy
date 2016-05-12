@@ -84,10 +84,15 @@ def parse_to_phrases(questions, labels):
             else:
                 j += 1
                 k += 1
+                over = False
                 while label[j] == 4:
                     j += 1
-                phrase.append(u[j] + " ")
-                order.append(label[j])
+                    if j == len(label):
+                        over = True
+                        break
+                if not over:
+                    phrase.append(u[j] + " ")
+                    order.append(label[j])
         m = 0
         while m < len(phrase):
             if order[m] == 0:
@@ -101,7 +106,11 @@ def parse_to_phrases(questions, labels):
                     del order[n]
                 n += 1
             m += 1
-        phrases.append(zip(phrase, order))
+        z = zip(phrase, order)
+        zvar = [zz for zz in z if zz[1] == 3]
+        zrel = [zz for zz in z if zz[1] == 1]
+        zent = [zz for zz in z if zz[1] == 0]
+        phrases.append(zvar + zrel + zent)
     return phrases
 
 def count_entities(phrase):
