@@ -2,7 +2,6 @@ import pickle, os, argparse
 
 from sklearn.linear_model import Perceptron, LogisticRegression
 from sklearn.multiclass import OneVsRestClassifier
-from sklearn.naive_bayes import BernoulliNB
 from nltk.stem.wordnet import WordNetLemmatizer
 
 from query_intention.fb_query import *
@@ -191,11 +190,11 @@ def obtain_pop_score(entities):
 def get_edge_features(phrase, dag, k, j):
     # k: edge target
     # j: edge start
-    q_type = ['who ', 'what ', 'when ', 'where ', 'how many ', 'where ']
-    q_var = [V for V in phrase if V[1] == 3]
+    q_type = ['who ', 'what ', 'when ', 'where ', 'how many ', 'where ','which ', 'how ', 'whom ']
+    q_var = [V[0] for V in phrase if V[1] == 3]
     f6_11 = [0] * len(q_type)
-    if q_var in q_type and len(q_var > 0):
-        f6_11[q_type.index(q_var[0][0])] = 1
+    if q_var[0] in q_type and len(q_var) > 0:
+        f6_11[q_type.index(q_var[0])] = 1
     ents = len([P for P in phrase if P[1] == 0])
     f1 = len(dag[j])
     f2 = ents
@@ -204,26 +203,29 @@ def get_edge_features(phrase, dag, k, j):
     f5 = len([item for sublist in dag for item in sublist])
     return [f1, f2, f3, f4, f5] + f6_11
 
-def edge_gold_standard(phrases, dags):
-    start = 0
+def edge_gold_standard(phrases, dags, gold_edges):
     result = []
     features = []
-    for i in range(start, 100):# range(len(dags)):
+    en = list(enumerate(list(set([item for sublist in gold_edges for subsublist in sublist for item in subsublist]))))
+    dct = dict([(item, index) for (index, item) in en])
+    for i in range(len(dags)):
         phrase = phrases[i]
         dag = dags[i]
-
-        for j in range(len(dag)):
-            d = dag[j]
-            if len(d) > 0:
-                p = phrase[j]
-                print p[0]
-                for k in d:
-                    features.append(get_edge_features(phrase, dag, k, j))
-                    inp = raw_input(phrase[k][0] + " ")
-                    result.append(int(inp))
-        if i % 10 == 0:
-            pickle.dump(features,open("partial_features.pickle","wb"))
-            pickle.dump(result,open("partial_labels.pickle","wb"))
+        gold = gold_edges[i]
+        if len(dag) == len(phrase):
+            for j in range(len(dag)):
+                d = dag[j]
+                g = gold[j]
+                if len(d) > 0:
+                    for k in d:
+                        features.append(get_edge_features(phrase, dag, k, j))
+                        # inp = raw_input(phrase[k][0] + " ")
+                    result += [dct[e_label] for e_label in g]
+        else:
+            print i
+        # if i % 10 == 0:
+        #     pickle.dump(features,open("partial_features.pickle","wb"))
+        #     pickle.dump(result,open("partial_labels.pickle","wb"))
     return result, features
 
 def lemmatize_word(text):
@@ -288,15 +290,15 @@ def get_bow(phrases, ent):
     q_type = ['who ', 'what ', 'when ', 'where ', 'how many ', 'where ']
     v_bow = []
     bow_dct = {}
-    g_dct = {}
+    g_dct = pickle.load(open("rel_dict_" + mode + "_" + str(size) + ".pickle"))
     gold = []
     r_bow = []
     i = 0
     k = 0
     for j in range(len(phrases)):
         phrase = phrases[j]
-        ents = ent[j]
-        g = [pp for pp in ents if pp[:3] != 'en.' and pp[:2] != 'm.']
+        g = ent[j]
+        # g = [pp for pp in ents if pp[:3] != 'en.' and pp[:2] != 'm.']
         v = [pp for pp in phrase if pp[1] == 3]
         r = [pp for pp in phrase if pp[1] == 1]
         if len(v) > 0:
@@ -316,11 +318,11 @@ def get_bow(phrases, ent):
                 rr.append(bow_dct[R])
             r_bow.append(rr)
         for G in g:
-            if G not in g_dct.keys():
-                g_dct[G] = k
-                k += 1
-        gold.append(g_dct[g[-1]])
-    return bow_dct, v_bow, r_bow, gold, g_dct
+            # if G not in g_dct.keys():
+            #     g_dct[G] = k
+            #     k += 1
+            gold.append(g_dct[G])
+    return bow_dct, v_bow, r_bow, gold
 
 def construct_entity_features(r_bow, v_bow, length):
     features = []
@@ -356,6 +358,10 @@ def get_idx(phrase, bow_dct):
 
 def parse_log_formula(q):
     gold = []
+    entities = []
+    relations = []
+    dag = []
+    edges = []
     formula = q.targetFormula
     if formula[:6] == '(count':
         formula = formula[7:-1]
@@ -365,54 +371,121 @@ def parse_log_formula(q):
         i += 1
     variable = formula[:i]
     condition = formula[i+1:]
+
     if len(variable.split()) == 1 and len(condition.split()) == 1:
         first = 'PO'
         second = 'SP'
         if variable[0] != '!':
             first = 'SP'
             second = 'PO'
-        gold = ['?x', 'x', 'x', 'x', variable[4:], first, 'x', second, condition[3:], 'x', 'x', 'x']
+        # gold = ['?x', 'x', 'x', 'x', variable[4:], first, 'x', second, condition[3:], 'x', 'x', 'x']
+        entities = [condition[3:]]
+        relations = [variable[4:]]
+        dag = [[], [0, 2], []]
+        edges = [[], [first, second], []]
+
     elif condition[:8] == '((lambda':
         cond = condition.split()
-        edge = cond[2][5:]
+        edge = cond[2][4:]
         ent =  cond[-1][3:-1]
         if cond[2][1] == '!':
-            gold = ['?x', 'x', 'x', 'x', '?cvt', variable[4:], 'x', 'x', ent, 'x', edge, 'x']
+            # gold = ['?x', 'x', 'x', 'x', '?cvt', variable[4:], 'x', 'x', ent, 'x', edge, 'x']
+            entities = [ent]
+            relations = ['?cvt']
+            dag = [[], [0], [1]]
+            edges = [[], [variable[4:]], [edge]]
+
         else:
-            gold = ['?x', 'x', 'x', 'x', '?cvt', variable[4:], 'x', edge, ent, 'x', 'x', 'x']
+            # gold = ['?x', 'x', 'x', 'x', '?cvt', variable[4:], 'x', edge, ent, 'x', 'x', 'x']
+            entities = [ent]
+            relations = ['?cvt']
+            dag = [[], [2], [0]]
+            edges = [[], [variable[4:]], [edge]]
+
     elif condition[:4] == '(and':
         condition = condition[5:-1]
         if condition[:8] == '((lambda':
             cond = condition.split('((lambda x ')[1:]
-            gold = ['?x', 'x', 'x'] + (['x'] * len(cond)) + ['?cvt', variable[4:], 'x']
-            ents = []
+            # gold = ['?x', 'x', 'x'] + (['x'] * len(cond)) + ['?cvt', variable[4:], 'x']
+            # ents = []
+            entities = []
+            edges = [[], [variable[4:]]]
             for c in cond:
                 C = c.split()
+                edges[1] += [C[0][4:]]
                 if not 'date' in c:
-                    gold += [C[0][4:]]
-                    ents += [C[-1][3:-1]] + ['x'] * (2 + len(cond))
+                    # gold += [C[0][4:]]
+                    # ents += [C[-1][3:-1]] + ['x'] * (2 + len(cond))
+                    entities += [C[-1][3:-1]]
                 else:
-                    gold += [C[0][4:]]
+                    # gold += [C[0][4:]]
                     if '-1' in c:
-                        ents += ['\"' + C[-3] + '\"^^xsd:gYear'] + ['x'] * (2 + len(cond))
+                        # ents += ['\"' + C[-3] + '\"^^xsd:gYear'] + ['x'] * (2 + len(cond))
+                        entities += ['\"' + C[-3] + '\"^^xsd:gYear']
                     else:
                         return []
-            gold += ents
+            # gold += ents
+            relations = ['?cvt']
+            dag = [[]] + [[0] + range(2, len(cond) + 2)] + [[]] * len(cond)
+            edges += [[]] * len(cond)
         else:
-            return []
+            condition = condition[5:]
+            cond = condition.split('((lambda x ')[1:]
+            for i in range(1, len(cond)-1):
+                cond[i] = cond[i][:-2]
+            # gold = ['?x', 'x', 'x'] + (['x'] * len(cond)) + ['?cvt', variable[4:], 'x']
+            # ents = []
+            entities = []
+            edges = [[], [variable[4:]]]
+            for c in cond:
+                C = c.split()
+                edges[1] += [C[0][4:]]
+                if not 'date' in c:
+                    # gold += [C[0][4:]]
+                    # ents += [C[-1][3:-1]] + ['x'] * (2 + len(cond))
+                    entities += [C[-1][3:-1]]
+                else:
+                    # gold += [C[0][4:]]
+                    if '-1' in c:
+                        # ents += ['\"' + C[-3] + '\"^^xsd:gYear'] + ['x'] * (2 + len(cond))
+                        entities += ['\"' + C[-3] + '\"^^xsd:gYear']
+                    else:
+                        return [], [], [], []
+            # gold += ents
+            relations = ['?cvt']
+            dag = [[]] + [[0] + range(2, len(cond) + 2)] + [[]] * len(cond)
+            edges += [[]] * len(cond)
     else:
         cond = condition.split()
         if cond[0][1] == '!':
             edge = cond[0][5:]
             ent = cond[1][3:-1]
-            gold = ['?x', 'x', 'x', 'x', '?cvt', variable[4:], 'x', 'x', ent, 'x', edge, 'x']
+            # gold = ['?x', 'x', 'x', 'x', '?cvt', variable[4:], 'x', 'x', ent, 'x', edge, 'x']
+            entities = [ent]
+            relations = ['?cvt']
+            dag = [[], [0], [1]]
+            edges += [[], [variable[4:]], [edge]]
         else:
             if cond[0][:3] == 'fb:':
-                gold = [cond[2][3:-1], 'x', 'x', 'x', cond[1][4:], 'PO', 'x', 'SP', cond[0][3:], 'x', 'x', 'x']
+                # gold = [cond[2][3:-1], 'x', 'x', 'x', cond[1][4:], 'PO', 'x', 'SP', cond[0][3:], 'x', 'x', 'x']
+                entities = [cond[0][3:]]
+                relations = [cond[1][4:]]
+                dag = [[], [0, 2], []]
+                edges += [[], ['PO', 'SP'], []]
             elif cond[0] == '(number':
-                gold = ['?x', 'x', 'x', 'x', variable[3:], 'SP', 'x', 'PO', cond[1][:-2], 'x', 'x', 'x']
-    return gold
+                # gold = ['?x', 'x', 'x', 'x', variable[3:], 'SP', 'x', 'PO', cond[1][:-2], 'x', 'x', 'x']
+                entities = [cond[1][:-2]]
+                relations = [variable[3:]]
+                dag = [[], [0, 2], []]
+                edges += [[], ['SP', 'PO'], []]
+    return entities, relations, edges, dag
 
+def create_dicts(gold_edges, rels):
+    ed = list(enumerate(list(set([item for sublist in gold_edges for subsublist in sublist for item in subsublist]))))
+    ed_dct = dict([(item, index) for (index, item) in ed])
+    rel = list(enumerate(list(set([item for sublist in rels for item in sublist]))))
+    rel_dct = dict([(item, index) for (index, item) in en])
+    return ed_dct, rel_dct
 if __name__ == "__main__":
     sep = os.path.sep
     parser = argparse.ArgumentParser(description="Obtain entity or relation candidates from Freebase")
@@ -433,28 +506,27 @@ if __name__ == "__main__":
     phrases = parse_to_phrases(questions, labels)
 
     if 'e' in type:
-        ent, s = get_db_entities(questions)
-        bow_dct, v_bow, r_bow, y, g_dct = get_bow(phrases, ent)
+        ent = pickle.load(open('query_gold_rel_' + mode + '.pickle'))
+        bow_dct, v_bow, r_bow, y = get_bow(phrases, ent)
         length = len(bow_dct.keys())
         X = construct_entity_features(r_bow, v_bow, length)
         csf = OneVsRestClassifier(LogisticRegression(verbose=0, max_iter=100))
         csf.fit(X, y)
-        # candidates = obtain_entity_candidates(phrases, n_cand)
         pickle.dump(csf,open("relation_lr_" + mode + "_" + str(size) + ".pickle","wb"))
         pickle.dump(bow_dct,open("bow_dict_" + mode + "_" + str(size) + ".pickle","wb"))
-        pickle.dump(g_dct,open("gold_dict_" + mode + "_" + str(size) + ".pickle","wb"))
 
     if 'r' in type:
-        candidates = pickle.load(open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
-        labels = pickle.load(open(path + "data" + sep + GOLD + "_" + mode + "_" + str(size) + ".pickle"))
-        rel_candidates = obtain_rel_candidates(candidates, labels)
-        pickle.dump(candidates,open(path + "data" + sep + REL_CANDIDATES + "_" + mode + "_" + str(size) + ".pickle","wb"))
+        candidates = obtain_entity_candidates(phrases, n_cand)
+        pickle.dump(candidates, open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle","wb"))
+        # candidates = pickle.load(open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
+        # labels = pickle.load(open(path + "data" + sep + GOLD + "_" + mode + "_" + str(size) + ".pickle"))
+        # rel_candidates = obtain_rel_candidates(candidates, labels)
+        # pickle.dump(candidates,open(path + "data" + sep + REL_CANDIDATES + "_" + mode + "_" + str(size) + ".pickle","wb"))
 
     if 'g' in type:
         candidates = pickle.load(open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
-        ent, s = get_db_entities(questions)
+        ent = pickle.load(open('query_gold_ent_' + mode + '.pickle'))
         labels = obtain_entity_labels(candidates, ent, phrases)
-        # print labels.count(-1)
         pickle.dump(labels, open(path + "data" + sep + GOLD + "_" + mode + "_" + str(size) + ".pickle","wb"))
 
     if 'f' in type:
@@ -467,27 +539,30 @@ if __name__ == "__main__":
         pickle.dump(L,open(path + "data" + sep + LABELS + "_" + mode + "_" + str(size) + ".pickle","wb"))
 
     if 'l' in type:
-        dags = parse_dags(phrases)
-        e = edge_gold_standard(phrases, dags)
+        dags = pickle.load(open("gold_dags_"  + mode + "_" + str(size) + ".pickle"))
+        gold_edges = pickle.load(open("query_gold_edges_" + mode + ".pickle"))
+        result, features = edge_gold_standard(phrases, dags, gold_edges)
+        pickle.dump(result, open(path + "query_intention" + sep + "edge_labels_" + mode + ".pickle","wb"))
+        pickle.dump(features, open(path + "query_intention" + sep + "edge_features_" + mode + ".pickle", "wb"))
 
     if 't' in type:
-        perc = OneVsRestClassifier(LogisticRegression(verbose=0, max_iter=50)) # Perceptron(n_iter=50, verbose=0)
+        perc = OneVsRestClassifier(LogisticRegression(verbose=0, max_iter=100)) # Perceptron(n_iter=50, verbose=0)
         y = pickle.load(open(path + "data" + sep + LABELS + "_trn_641.pickle"))
         X = pickle.load(open(path + "data" + sep + FEATURES + "_trn_641.pickle"))
         w = perc.fit(X,y)
         pickle.dump(w, open("ent_lr_trn_641.pickle","wb"))
         y_tst = pickle.load(open(path + "data" + sep + LABELS + "_tst_276.pickle"))
         X_tst = pickle.load(open(path + "data" + sep + FEATURES + "_tst_276.pickle"))
-        print perc.score(X_tst,y_tst)
+        print perc.score(X_tst, y_tst)
 
     if 'd' in type:
         perc = Perceptron(n_iter=100, verbose=0)
-        y = pickle.load(open(path + "query_intention" + sep + "edge_labels_100.pickle"))
-        X = pickle.load(open(path + "query_intention" + sep + "edge_features_100.pickle"))
+        y = pickle.load(open(path + "query_intention" + sep + "edge_labels_trn.pickle"))
+        X = pickle.load(open(path + "query_intention" + sep + "edge_features_trn.pickle"))
         w = perc.fit(X,y)
-        pickle.dump(w, open("edge_perceptron_trn_100.pickle","wb"))
-        y_tst = pickle.load(open(path + "query_intention" + sep + "edge_labels_tst_100.pickle"))
-        X_tst = pickle.load(open(path + "query_intention" + sep + "edge_features_tst_100.pickle"))
+        pickle.dump(w, open("edge_perceptron_trn.pickle","wb"))
+        y_tst = pickle.load(open(path + "query_intention" + sep + "edge_labels_tst.pickle"))
+        X_tst = pickle.load(open(path + "query_intention" + sep + "edge_features_tst.pickle"))
         print perc.score(X_tst,y_tst)
 
     if 'a' in type:
@@ -499,9 +574,24 @@ if __name__ == "__main__":
         pickle.dump(mapped, open("emapped.pickle","wb"))
 
     if 'q' in type:
-        counter = 0
-        for q in questions:
-            form = parse_log_formula(q)
-            if len(form) > 0:
-                counter += 1
-        print counter
+        entities = []
+        relations = []
+        edges = []
+        dags = []
+        for q in range(len(questions)):
+            ent, rel, edg, dag = parse_log_formula(questions[q])
+            entities.append(ent)
+            dags.append(dag)
+            edges.append(edg)
+        #     relations.append(rel)
+        # pickle.dump(entities, open('query_gold_ent_' + mode + '.pickle','wb'))
+        # pickle.dump(relations, open('query_gold_rel_' + mode + '.pickle','wb'))
+        # pickle.dump(dags, open('query_gold_dags_' + mode + '.pickle','wb'))
+        pickle.dump(edges, open('query_gold_edges_' + mode + '.pickle','wb'))
+
+    if 'c' in type:
+        gold_edges = pickle.load(open("query_gold_edges_" + mode + ".pickle"))
+        rel = pickle.load(open('query_gold_rel_' + mode + '.pickle'))
+        ed_dct, rel_dct = create_dicts(gold_edges, rel)
+        pickle.dump(rel_dct,open("rel_dict_" + mode + "_" + str(size) + ".pickle","wb"))
+        pickle.dump(rel_dct,open("edge_dict_" + mode + "_" + str(size) + ".pickle","wb"))
