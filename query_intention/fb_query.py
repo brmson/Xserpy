@@ -4,11 +4,13 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 
 def query_freebase_entity(query, scoring, size):
     api_key = open(".api_key").read()
-    # service_url = 'https://www.googleapis.com/freebase/v1/search'
-    service_url = 'https://kgsearch.googleapis.com/v1/entities:search'
+    service_url = 'https://www.googleapis.com/freebase/v1/search'
+    # service_url = 'https://kgsearch.googleapis.com/v1/entities:search'
     params = {
             'query': query,
-            'key': api_key
+            'key': api_key,
+            'scoring': scoring,
+            'lang': 'en'
     }
     url = service_url + '?' + urllib.urlencode(params)
     response = json.loads(urllib.urlopen(url).read())
