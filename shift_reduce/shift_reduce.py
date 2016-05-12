@@ -14,13 +14,20 @@ class Item(object):
         self.sequence = sequence
         self.data = data[:]
         self.features = features[:]
-        self.features.append(self.construct_features(data[0], data[1], stack, queue, dag))
+        self.features.append(self.construct_features(data[0], data[1], stack, queue, dag, sequence))
 
-    def construct_features(self, phrase, pos, stack, queue, dag):
+    def construct_features(self, phrase, pos, stack, queue, dag, sequence):
         features = []
+        if len(sequence) > 0:
+            #features.append("SEQ_u."+str(sequence[-1]))
+            if len(sequence) > 1:
+                # features.append("SEQ_b."+str(sequence[-2]) + "_" + str(sequence[-1]))
+                if len(sequence) > 2:
+                    features.append("SEQ_t." + str(sequence[-3]) + "_" + str(sequence[-2]) + "_" + str(sequence[-1]))
+                    if len(sequence) > 3:
+                        features.append("SEQ_t." + str(sequence[-4]) + "_" + str(sequence[-3]) + "_" + str(sequence[-2]) + "_" + str(sequence[-1]))
         if stack:
             head = stack[-1]
-            #
             features.append("ST_p."+pos[head][:-1])
             features.append("ST_w."+phrase[head][0])
             features.append("ST_p_w."+pos[head]+phrase[head][0])
@@ -167,11 +174,16 @@ def parse_to_phrases(questions, labels, pos):
             else:
                 j += 1
                 k += 1
+                over = False
                 while label[j] == 4:
                     j += 1
-                phrase.append(u[j] + " ")
-                pos_t.append(POS[j] + "_")
-                order.append(label[j])
+                    if j == len(label):
+                        over = True
+                        break
+                if not over:
+                    phrase.append(u[j] + " ")
+                    pos_t.append(POS[j] + "_")
+                    order.append(label[j])
         m = 0
         while m < len(phrase):
             if order[m] == 0:
@@ -187,8 +199,15 @@ def parse_to_phrases(questions, labels, pos):
                     del order[n]
                 n += 1
             m += 1
-        phrases.append(zip(phrase,order))
-        pos_tag.append(pos_t)
+        z = zip(phrase,order)
+        zvar = [zz for zz in z if zz[1] == 3]
+        zrel = [zz for zz in z if zz[1] == 1]
+        zent = [zz for zz in z if zz[1] == 0]
+        pvar = [pos_t[i] for i in range(len(pos_t)) if z[i][1] == 3]
+        prel = [pos_t[i] for i in range(len(pos_t)) if z[i][1] == 1]
+        pent = [pos_t[i] for i in range(len(pos_t)) if z[i][1] == 0]
+        phrases.append(zvar + zrel + zent)
+        pos_tag.append(pvar + prel + pent)
     return phrases, pos_tag
 
 def derive_labels(dags, phrases, pos):
@@ -204,21 +223,22 @@ def derive_labels(dags, phrases, pos):
         if ("", 0) in phrases[i]:
             phrases[i].remove(("", 0))
         phrase = range(len(phrases[i]))
-        ddag = dags[i]
-        dag = []
-        for dd in ddag:
-            dag.append([int(d) for d in dd])
+        dag = dags[i]
+        # dag = []
+        # for dd in ddag:
+        #     dag.append([int(d) for d in dd])
         new_item = Item([], phrase, [[] for p in range(len(phrase))], [], [], (phrases[i], pos[i]))
         queue = [new_item]
 
         while queue:
             item = queue.pop()
-            if item.dag == dag:
-                if sequence is None or len(item.sequence) < sequence:
-                    sequence = item.sequence
-                    feature = item.features
             if not item.queue:
-                continue
+                if item.dag == dag:
+                    if sequence is None or len(item.sequence) < len(sequence):
+                        sequence = item.sequence
+                        feature = item.features
+                else:
+                    continue
             else:
                 shifted_item = [shift(item)]
                 queue = shifted_item + queue
@@ -244,6 +264,7 @@ def derive_labels(dags, phrases, pos):
             features += feature[:-1]
         else:
             seqs.append([])
+    print sequences.count(0),sequences.count(1),sequences.count(2),sequences.count(3),'\n'
     return zip(features, sequences),seqs
 
 def batch_shift_reduce(sentences, pos, weights, size):
@@ -263,7 +284,9 @@ def compute_error(dags, gold, seqs):
         dag = dags[i].dag
         g = gold[i]
         if len(dag) == len(g) and len(seqs[i]) > 0:
+            # print seqs[i],dags[i].sequence
             if dag == g:
+                print dag,g
                 correct += 1
                 total += len(dag)**2
             else:
@@ -292,7 +315,7 @@ if __name__ == "__main__":
     parser.add_argument("type", help="Operating mode for script", type=str)
     parser.add_argument("mode", help="Training or testing split", type=str)
     parser.add_argument("beam", help="Beam size for beam search", type=int)
-    parser.add_argument("--rate", help="Learning rate for training", type=int, default=1)
+    parser.add_argument("--rate", help="Learning rate for training", type=float, default=1)
     args = parser.parse_args()
     path = args.fpath
     mode = args.mode
@@ -310,11 +333,10 @@ if __name__ == "__main__":
     if 'c' in args.type:
         phr = examples_to_phrases(labels, questions)
         phrases, pos = parse_to_phrases(questions, labels_split, pos_tagged)
-        DAGs = parse_dags(phrases)
+        DAGs = pickle.load(open("data" + sep + "gold_dags_" + mode + "_" + str(size) + ".pickle"))
         examples,seqs = derive_labels(DAGs, phrases, pos)
         empty_weights = init_weights(examples, {}, c)
         pickle.dump(examples, open(path + "data" + sep + "dag_examples_" + mode + "_" + str(size) + ".pickle","wb"))
-        pickle.dump(DAGs, open(path + "data" + sep + "gold_dags_" + mode + "_" + str(size) + ".pickle","wb"))
         pickle.dump(seqs, open(path + "data" + sep + "gold_sequences_" + mode + "_" + str(size) + ".pickle","wb"))
         pickle.dump(empty_weights, open(path + "data" + sep + "empty_weights_dag_" + mode + "_" + str(size) + ".pickle","wb"))
 
