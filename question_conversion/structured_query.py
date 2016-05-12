@@ -1,19 +1,21 @@
 import pickle
 from SPARQLWrapper import SPARQLWrapper, JSON
 
-def convert_to_queries(dag, phrase):
+def convert_to_queries(dag):
+    dct = {30: 5, 20: 4, 12: 3, 6: 2}
     queries = get_entity_names(dag)
     for d in range(len(dag)):
         if '?' not in dag[d]:
             dag[d] = ':' + dag[d]
     Q = ''
-    for i in range(len(phrase)):
+    length = dct[len(dag)]
+    for i in range(length):
         query = ""
-        index = i*(len(phrase)+1)
+        index = i*(length+1)
         if dag[index] != ':x':
-            edges = dag[index+1:index+len(phrase)+1]
+            edges = dag[index+1:index+length+1]
             for j in range(len(edges)):
-                k = j*(len(phrase)+1)
+                k = j*(length+1)
                 if edges[j] != ':x':
                     if edges[j] == ':SP':
                         if len(Q) == 0:
@@ -33,8 +35,8 @@ def convert_to_queries(dag, phrase):
                         # dag[0] = "?cvt"
                     else:
                         query = dag[index] + " " + edges[j] + " " + dag[k]
-        if len(query) > 0:
-            queries.append(query)
+                    if len(query) > 0:
+                        queries.append(query)
     return queries
 
 def create_query_file(filename, queries,phr):
@@ -97,14 +99,13 @@ def query_fb_endpoint(query):
 
 
 if __name__ == "__main__":
-    dags = pickle.load(open("query_gold_0_100.pickle"))
-    phrases = pickle.load(open("annotate\\dags_100.pickle"))
+    dags = pickle.load(open("C:\\Users\\Martin\\PycharmProjects\\xserpy\\query_intention\\query_gold_int_trn.pickle"))
     phr = pickle.load(open("phrases_100.pickle"))
 
-    i = 70
+    i = 52
     q = []
-    for d, p in zip(dags[i:i+1], phrases[i:i+1]):
-        q.append(convert_to_queries(d, p))
+    for d in dags[i:i+1]:
+        q.append(convert_to_queries(d))
     ph = phr[i]
     i = 0
     create_query_file("test_query.txt", q[i],ph)
