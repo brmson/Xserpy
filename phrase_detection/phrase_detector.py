@@ -1,3 +1,4 @@
+"""Create examples for phrase detection training, train a model, evaluate it on a testing split"""
 import argparse, pickle, random,os
 from collections import defaultdict
 

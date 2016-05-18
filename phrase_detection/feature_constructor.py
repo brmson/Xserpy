@@ -1,3 +1,4 @@
+""""Construct features for phrase detection"""
 import os
 import argparse
 import json
