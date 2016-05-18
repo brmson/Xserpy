@@ -219,7 +219,6 @@ def check_dag(gold, dag):
                 return False
     return True
 
-
 def parse_to_phrases(questions, labels, pos):
     """Group words into phrases according to their labels
 

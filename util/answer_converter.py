@@ -1,14 +1,17 @@
+"""Add gaps for missing answers so that one line equals one answer for each question"""
 from annotate.annotator import object_decoder,Question
-import json
+import json, os, sys
 
 if __name__ == "__main__":
-    path = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\"
-    questions = json.load(open(path+"data\\free917.tst.examples.canonicalized.json"), object_hook=object_decoder)
-    answers = [line.strip() for line in open("data\\free917v2.test.gold")]
-    formulas = [line.strip() for line in open("data\\free917v2.test.mrl")]
+    sep = os.path.sep
+    path = sys.argv[1]
+    mode = sys.argv[2]
+    questions = json.load(open(path + "data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
+    answers = [line.strip() for line in open(path + "data" + sep + "free917v2." + mode + ".gold")]
+    formulas = [line.strip() for line in open(path + "data" + sep + "free917v2." + mode + ".mrl")]
     z = zip(formulas,answers)
     gold = dict(zip(formulas,answers))
-    with open("data\\free917_tst_answers.txt","w") as f:
+    with open(path + "data" + sep + "free917_" + mode + "_answers.txt","w") as f:
         for q in questions:
             if q.targetFormula in gold.keys():
                 f.write(gold[q.targetFormula]+"\n")
