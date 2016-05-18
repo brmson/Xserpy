@@ -2,6 +2,14 @@ import argparse, pickle, random,os
 from collections import defaultdict
 
 def compute_score(features, weights, index):
+    """Compute score a sample has for certain class
+
+    Keyword arguments:
+    features -- feature vector of a sample (list of strings)
+    weights -- trained model
+    index -- desired class
+
+    """
     score = 0
     for feat in features:
         if feat not in weights:
@@ -10,6 +18,14 @@ def compute_score(features, weights, index):
     return score
 
 def predict(weights, features, cl):
+    """Predict best class for a sample
+
+    Keyword arguments:
+    weights -- trained model
+    features -- feature vector of a sample (list of strings)
+    cl -- number of classes
+
+    """
     classes = range(cl)
     scores = defaultdict(float)
     for feat in features:
@@ -21,6 +37,13 @@ def predict(weights, features, cl):
     return max(classes,  key=lambda c: (scores[c],  c))
 
 def init_weights(examples, weights, cl):
+    """Initialize or update weights for training
+
+    examples -- set of samples whose features are loaded to weights
+    weights -- empty for initializing or partially filled for updating
+    cl -- number of classes
+
+    """
     for e, t in examples:
         for f in e:
             if f not in weights.keys():
@@ -30,6 +53,16 @@ def init_weights(examples, weights, cl):
     return weights
 
 def train(n_iter,  examples, weights, cl, learning_rate):
+    """Train a model using perceptron algorithm
+
+    Keyword arguments:
+    n_iter -- number of iterations to be used
+    examples -- set of training samples in (feature vector, label) shape
+    weights -- empty weights
+    cl -- number of classes
+    learning_rate -- value by which the weights should be changed
+
+    """
     for i in range(n_iter):
         err = 0
         for features,  true in examples:
@@ -44,6 +77,14 @@ def train(n_iter,  examples, weights, cl, learning_rate):
     return weights
 
 def compute_error(features, labels, weights):
+    """Compute accuracy of trained model on an evaluation set
+
+    Keyword arguments:
+    features -- feature vectors of samples in testing set
+    labels -- gold standard labels of samples in testing set
+    weights -- trained model
+
+    """
     error = 0
     for i in range(len(features)):
         label = labels[i]
@@ -68,6 +109,7 @@ if __name__ == "__main__":
     mode = args.mode
     learning_rate = args.rate
 
+    # Mode for creating samples
     if 'l' in args.type:
         words = pickle.load(open(path + "data" + sep + "phrase_detect_features_" + mode + "_" + str(args.size) + "_arr.pickle"))
         labels = pickle.load(open(path + "data" + sep + "labels_" + mode + "_" + str(args.size) + ".pickle"))
@@ -76,12 +118,14 @@ if __name__ == "__main__":
         pickle.dump(examples, open(path + "data" + sep + "phr_detect_examples_" + mode + "_" + str(args.size) + ".pickle","wb"))
         pickle.dump(empty_weights, open(path + "data" + sep + "empty_weights_" + mode + "_" + str(args.size) + ".pickle","wb"))
 
+    # Mode for computing error
     if 'e' in args.type:
         features = pickle.load(open(path + "data" + sep + "phrase_detect_features_tst_276_arr.pickle"))
         weights = pickle.load(open(path + "models" + sep + "w_641_i" + str(args.n_iter) + ".pickle"))
         labels = pickle.load(open(path + "data" + sep + "labels_tst_276.pickle"))
         compute_error(features, labels, weights)
 
+    # Mode for training model
     else:
         examples = pickle.load(open(path + "data" + sep + "phr_detect_examples_" + mode + "_" + str(args.size) + ".pickle"))
         weights = pickle.load(open(path + "data" + sep + "empty_weights_" + mode + "_" + str(args.size) + ".pickle"))
