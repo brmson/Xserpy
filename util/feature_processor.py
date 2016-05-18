@@ -1,7 +1,14 @@
+"""Convert features from original string-array shape to sparse one-hot array shape"""
 import argparse, pickle, numpy as np
 from sklearn.preprocessing import Imputer, OneHotEncoder
 
 def process_features(ftr):
+    """Finds values of each feature for all questions
+
+    Keyword arguments:
+    ftr -- tuple of lists of features for each sample
+
+    """
     features = {}
     i = 0
     for F in ftr:
@@ -14,22 +21,48 @@ def process_features(ftr):
     return np.matrix([process_row(features[x]) for x in features.keys()]).T
 
 def process_row(row):
+    """Assign each feature an integer index and convert the values of features to integers
+
+    Keyword arguments:
+    row -- one feature with values to be converted
+
+    """
     unique = list(set(row))
     dct = dict([(item,index) for index,item in list(enumerate(unique))])
     result = [mapper(x,dct) for x in row]
     return result
 
 def mapper(x, dct):
+    """Maps feature values (strings) to integers
+
+    Keyword arguments:
+    x -- key
+    dct -- dictionary of values
+
+    """
     if x == 'x':
         return np.nan
     return dct[x]
 
 def imputator(features):
+    """Fill in missing values with mean of the remaining samples
+
+    Keyword arguments:
+    features -- feature matrix
+
+    """
     imp = Imputer(missing_values='NaN', strategy='mean', axis=0)
     imp.fit(features)
     return imp.transform(features)
 
 def encode(features, labels):
+    """One-hot encode the values of each feature
+
+    Keyword arguments:
+    features -- feature matrix
+    labels -- labels of samples
+
+    """
     enc = OneHotEncoder()
     enc.fit(features)
     arr = enc.transform(features).toarray()
