@@ -28,7 +28,9 @@ def get_phrases_free(question):
         label = predict(pd_model, feature, 4)
         labels.append(label)
         l = label
-    return labels, pos, q
+    phr, pos_t = sr.parse_to_phrases([q], [labels], pos)
+    candidates = el.obtain_entity_candidates(phr, 5)
+    return labels, pos, q, candidates
 
 def get_phrases(phrase, features):
     phrases = []
@@ -141,8 +143,8 @@ if __name__ == "__main__":
 
     if 'i' in type:
         question = raw_input("Enter question: ")
-        phrases, pos, q = get_phrases_free(question)
-        answer = convert_question(model_dag, candidates[i], q, phrases, pos[0], 'queries' + sep + mode + "_" + str(i+1)+".sparql")
+        phrases, pos, q, candidates = get_phrases_free(question)
+        answer = convert_question(model_dag, candidates[0], q, phrases, pos[0], 'queries' + sep + mode + "_" + str(i+1)+".sparql")
 
     elif 'f' in type:
         questions = [line.strip() for line in ""]
