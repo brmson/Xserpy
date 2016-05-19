@@ -2,6 +2,8 @@
 import json, urllib, sys
 from SPARQLWrapper import SPARQLWrapper, JSON
 
+PATH_TO_KEY = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\query_intention\\.api_key"
+
 def query_freebase_entity(query, scoring, size):
     """Query Freebase for entity candidates
 
@@ -11,7 +13,7 @@ def query_freebase_entity(query, scoring, size):
     size -- number of candidates returned
 
     """
-    api_key = open(".api_key").read()
+    api_key = open(PATH_TO_KEY).read()
     service_url = 'https://www.googleapis.com/freebase/v1/search'
     # Different URL: https://kgsearch.googleapis.com/v1/entities:search
     params = {
@@ -34,7 +36,7 @@ def query_freebase_property(topic_id):
     topic_id -- machine ID of desired entity
 
     """
-    api_key = open(".api_key").read()
+    api_key = open(PATH_TO_KEY).read()
     service_url = 'https://www.googleapis.com/freebase/v1/topic'
     params = {
       'key': api_key,

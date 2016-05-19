@@ -1,3 +1,4 @@
+"""Convert a DAG linked to a knowledge base to SPARQL query string or file"""
 import pickle, sys
 from SPARQLWrapper import SPARQLWrapper, JSON
 
