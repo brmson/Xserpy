@@ -77,22 +77,36 @@ def train(n_iter,  examples, weights, cl, learning_rate):
         print err/len(examples)
     return weights
 
-def compute_error(features, labels, weights):
+def compute_error(features, labels, weights, phrases):
     """Compute accuracy of trained model on an evaluation set
 
     Keyword arguments:
     features -- feature vectors of samples in testing set
     labels -- gold standard labels of samples in testing set
     weights -- trained model
+    phrases -- gold standard labels of samples in testing set, divided according to words in questions
 
     """
     error = 0
+    guesses = []
     for i in range(len(features)):
         label = labels[i]
         guess = predict(weights, features[i],5)
+        guesses.append(guess)
         if guess != label:
             error += 1.0
+    j = 0
+    i = 0
+    tot_error = 0
+    while j < len(guesses):
+        phrase = phrases[i]
+        guessed = guesses[j:j+len(phrase)]
+        if guessed != phrase:
+            tot_error += 1.0
+        j += len(phrase)
+        i += 1
     print 1.0 - error/len(features)
+    print 1.0 - tot_error/len(phrases)
 
 if __name__ == "__main__":
     sep = os.path.sep
@@ -124,7 +138,8 @@ if __name__ == "__main__":
         features = pickle.load(open(path + "data" + sep + "phrase_detect_features_tst_276_arr.pickle"))
         weights = pickle.load(open(path + "models" + sep + "w_641_i" + str(args.n_iter) + ".pickle"))
         labels = pickle.load(open(path + "data" + sep + "labels_tst_276.pickle"))
-        compute_error(features, labels, weights)
+        phrases = pickle.load(open(path + "data" + sep + "questions_tst_276.pickle"))
+        compute_error(features, labels, weights, phrases)
 
     # Mode for training model
     else:
