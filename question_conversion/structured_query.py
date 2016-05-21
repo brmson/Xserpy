@@ -38,11 +38,9 @@ def convert_to_queries(dag):
                             query = Q
                     elif edges[j] == ':SC':
                         query = dag[k] + " :type.object.type " + dag[index]
-                        # query = dag[k] + " " + dag[index] + " ?cvt"
-                        # dag[0] = "?cvt"
                     else:
                         query = dag[index] + " " + edges[j] + " " + dag[k]
-                    if len(query) > 0:
+                    if len(query) > 0 and query.split()[1][0] != '?' :
                         queries.append(query)
     return queries
 
@@ -57,10 +55,8 @@ def create_query_file(filename, queries, phr):
     """
     f = open(filename, "w")
     f.write("PREFIX : <http://rdf.freebase.com/ns/>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n")
-    select = "?x"
-    if ('when ',3) not in phr and ('how many ',3) not in phr:
-        queries.append('?x rdfs:label ?name .\nFILTER (lang(?name) = \'en\')')
-        select = "?name"
+    select = "?x ?name"
+    queries.append('OPTIONAL {?x rdfs:label ?name .\nFILTER (lang(?name) = \'en\')}')
     if ('how many ',3) in phr:
         f.write("SELECT count(" + select + ") {\n")
     else:
@@ -82,10 +78,8 @@ def create_query(queries, phr):
     """
     f = ''
     f += "PREFIX : <http://rdf.freebase.com/ns/>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n"
-    select = "?x"
-    if ('when ',3) not in phr and ('how many ',3) not in phr:
-        queries.append('?x rdfs:label ?name .\nFILTER (lang(?name) = \'en\')')
-        select = "?name"
+    select = "?x ?name"
+    queries.append('OPTIONAL {?x rdfs:label ?name .\nFILTER (lang(?name) = \'en\')}')
     if ('how many ',3) in phr:
         f += "SELECT count(" + select + ") {\n"
     else:
@@ -135,7 +129,7 @@ if __name__ == "__main__":
     dags = pickle.load(open(sys.argv[2]))
     phr = pickle.load(open("phrases_100.pickle"))
 
-    i = sys.argv[1]
+    i = int(sys.argv[1])
     q = []
     for d in dags[i:i+1]:
         q.append(convert_to_queries(d))
