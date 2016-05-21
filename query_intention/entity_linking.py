@@ -702,41 +702,19 @@ if __name__ == "__main__":
     labels = pickle.load(open(path +"data" + sep + "questions_" + mode + "_" + str(size) + ".pickle"))
     phrases = parse_to_phrases(questions, labels)
 
+    # Mode for obtaining candidates from Freebase
     if 'e' in type:
-        ent = pickle.load(open('query_gold_rel_trn.pickle'))
-        bow_dct, v_bow, r_bow, y = get_bow(phrases, ent)
-        length = len(bow_dct.keys())
-        X = construct_relation_features(r_bow, v_bow, length)
-        # check_features(X, y)
-        # csf = OneVsRestClassifier(SVC(verbose=0, n_iter=500))
-        csf = LinearSVC(max_iter=10000)
-        csf.fit(X, y)
-        ent = pickle.load(open('query_gold_rel_tst.pickle'))
-        questions = json.load(open(path+"data" + sep + "free917.tst.examples.canonicalized.json"), object_hook=object_decoder)
-        labels = pickle.load(open(path +"data" + sep + "questions_tst_276.pickle"))
-        phrases = parse_to_phrases(questions, labels)
-        bow_dct, v_bow, r_bow, y_tst = get_bow(phrases, ent)
-        X_tst = construct_relation_features(r_bow, v_bow, length)
-        # print csf.score(X_tst, y_tst)
-        g_dct = pickle.load(open("rel_dict.pickle"))
-        evaluate_model(X_tst, ent, g_dct, csf, phrases)
-        # pickle.dump(csf,open("relation_lr_trn_641.pickle","wb"))
-        # pickle.dump(bow_dct,open("bow_dict_" + mode + "_" + str(size) + ".pickle","wb"))
-
-    if 'r' in type:
         candidates = obtain_entity_candidates(phrases, n_cand)
         pickle.dump(candidates, open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle","wb"))
-        # candidates = pickle.load(open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
-        # labels = pickle.load(open(path + "data" + sep + GOLD + "_" + mode + "_" + str(size) + ".pickle"))
-        # rel_candidates = obtain_rel_candidates(candidates, labels)
-        # pickle.dump(candidates,open(path + "data" + sep + REL_CANDIDATES + "_" + mode + "_" + str(size) + ".pickle","wb"))
 
+    # Mode for obtaining gold standard of entities
     if 'g' in type:
         candidates = pickle.load(open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
         ent = pickle.load(open('query_gold_ent_' + mode + '.pickle'))
         labels = obtain_entity_labels(candidates, ent, phrases)
         pickle.dump(labels, open(path + "data" + sep + GOLD + "_" + mode + "_" + str(size) + ".pickle","wb"))
 
+    # Mode for obtaining features of entities
     if 'f' in type:
         candidates = pickle.load(open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
         labels = pickle.load(open(path + "data" + sep + GOLD + "_" + mode + "_" + str(size) + ".pickle"))
@@ -746,15 +724,9 @@ if __name__ == "__main__":
         pickle.dump(F,open(path + "data" + sep + FEATURES + "_" + mode + "_" + str(size) + ".pickle","wb"))
         pickle.dump(L,open(path + "data" + sep + LABELS + "_" + mode + "_" + str(size) + ".pickle","wb"))
 
-    if 'l' in type:
-        dags = pickle.load(open("gold_dags_" + mode + "_" + str(size) + ".pickle"))
-        gold_edges = pickle.load(open("query_gold_edges_" + mode + ".pickle"))
-        result, features = edge_gold_standard(phrases, dags, gold_edges)
-        pickle.dump(result, open(path + "query_intention" + sep + "edge_labels_" + mode + ".pickle","wb"))
-        pickle.dump(features, open(path + "query_intention" + sep + "edge_features_" + mode + ".pickle", "wb"))
-
+    # Mode for training model for linking entities
     if 't' in type:
-        perc = OneVsRestClassifier(LogisticRegression(verbose=0, max_iter=100)) # Perceptron(n_iter=50, verbose=0)
+        perc = OneVsRestClassifier(LogisticRegression(verbose=0, max_iter=100))
         y = pickle.load(open(path + "data" + sep + LABELS + "_trn_641.pickle"))
         X = pickle.load(open(path + "data" + sep + FEATURES + "_trn_641.pickle"))
         w = perc.fit(X,y)
@@ -763,8 +735,27 @@ if __name__ == "__main__":
         X_tst = pickle.load(open(path + "data" + sep + FEATURES + "_tst_276.pickle"))
         print perc.score(X_tst, y_tst)
 
+    # Mode for training model for linking relations
+    if 'r' in type:
+        ent = pickle.load(open('query_gold_rel_trn.pickle'))
+        bow_dct, v_bow, r_bow, y = get_bow(phrases, ent)
+        length = len(bow_dct.keys())
+        X = construct_relation_features(r_bow, v_bow, length)
+        csf = LinearSVC(max_iter=10000)
+        csf.fit(X, y)
+        pickle.dump(csf, open("relation_lr_trn_641.pickle","wb"))
+
+    # Mode for obtaining gold standard and features of edges
+    if 'l' in type:
+        dags = pickle.load(open("gold_dags_" + mode + "_" + str(size) + ".pickle"))
+        gold_edges = pickle.load(open("query_gold_edges_" + mode + ".pickle"))
+        result, features = edge_gold_standard(phrases, dags, gold_edges)
+        pickle.dump(result, open(path + "query_intention" + sep + "edge_labels_" + mode + ".pickle","wb"))
+        pickle.dump(features, open(path + "query_intention" + sep + "edge_features_" + mode + ".pickle", "wb"))
+
+    # Mode for training and evaluating model for linking edges
     if 'd' in type:
-        perc = OneVsRestClassifier(LogisticRegression(verbose=1, max_iter=100)) # Perceptron(n_iter=100, verbose=0)
+        perc = OneVsRestClassifier(LogisticRegression(verbose=1, max_iter=100))
         y = pickle.load(open(path + "query_intention" + sep + "edge_labels_trn.pickle"))
         X = pickle.load(open(path + "query_intention" + sep + "edge_features_trn.pickle"))
         w = perc.fit(X,y)
@@ -773,6 +764,7 @@ if __name__ == "__main__":
         X_tst = pickle.load(open(path + "query_intention" + sep + "edge_features_tst.pickle"))
         print perc.score(X_tst,y_tst)
 
+    # Testing mode for linking whole questions
     if 'a' in type:
         dags = parse_dags(phrases)
         candidates = pickle.load(open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
@@ -781,6 +773,7 @@ if __name__ == "__main__":
             mapped.append(label_all(phrases[i], dags[i], candidates[i], "ent_lr_trn_641.pickle", "edge_lr_trn.pickle", "relation_lr_trn_641.pickle" "bow_dict_tst_276.pickle", "rel_dict.pickle"))
         pickle.dump(mapped, open("emapped.pickle","wb"))
 
+    # Mode for parsing gold standards from logic formulas
     if 'q' in type:
         alphabets = [chr(c) for c in range(97,106)]
         keywords = ['?' + ''.join(i) for i in product(alphabets, repeat = 3)]
@@ -794,14 +787,15 @@ if __name__ == "__main__":
             dags.append(dag)
             edges.append(edg)
             relations.append(rel)
-        # pickle.dump(entities, open('query_gold_ent_' + mode + '.pickle','wb'))
+        pickle.dump(entities, open('query_gold_ent_' + mode + '.pickle','wb'))
         pickle.dump(relations, open('query_gold_rel_' + mode + '.pickle','wb'))
-        # pickle.dump(dags, open('query_gold_dags_' + mode + '.pickle','wb'))
-        # pickle.dump(edges, open('query_gold_edges_' + mode + '.pickle','wb'))
+        pickle.dump(dags, open('query_gold_dags_' + mode + '.pickle','wb'))
+        pickle.dump(edges, open('query_gold_edges_' + mode + '.pickle','wb'))
 
+    # Mode for creating dictionaries
     if 'c' in type:
         gold_edges = pickle.load(open("query_gold_edges_trn.pickle")) + pickle.load(open("query_gold_edges_tst.pickle"))
         rel = pickle.load(open('query_gold_rel_trn.pickle')) + pickle.load(open('query_gold_rel_tst.pickle'))
         ed_dct, rel_dct = create_dicts(gold_edges, rel)
         pickle.dump(rel_dct,open("rel_dict.pickle","wb"))
-        # pickle.dump(ed_dct,open("edge_dict.pickle","wb"))
+        pickle.dump(ed_dct,open("edge_dict.pickle","wb"))
