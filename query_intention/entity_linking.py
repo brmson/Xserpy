@@ -308,7 +308,7 @@ def lemmatize_word(text):
     lmtzr = WordNetLemmatizer()
     return [lmtzr.lemmatize(t,'v') for t in text]
 
-def label_edges(phrase, dag, w, j):
+def label_edges(phrase, dag, w, j, path):
     """Label all edges going out of a node given a trained model
 
     Keyword arguments:
@@ -316,9 +316,10 @@ def label_edges(phrase, dag, w, j):
     dag -- DAG of question
     w -- chosen model
     j -- index of node
+    path -- path to dictionary
 
     """
-    d = pickle.load(open("C:\\Users\\Martin\\PycharmProjects\\xserpy\\query_intention\\edge_dict.pickle"))
+    d = pickle.load(open(path))
     dct = [''] * len(d.keys())
     for D in d.keys():
         dct[d[D]] = D
@@ -365,7 +366,7 @@ def label_relation(phrase, w, bow_dct, g_dct):
             return k
     return 'relation'
 
-def label_all(phrase, dag, candidates, ent_path, ed_path, rel_path, bow_path, g_path):
+def label_all(phrase, dag, candidates, ent_path, ed_path, rel_path, bow_path, g_path, dct_path):
     """Link all phrases and edges in on question to knowledge base given a trained model
 
     Keyword arguments:
@@ -377,6 +378,7 @@ def label_all(phrase, dag, candidates, ent_path, ed_path, rel_path, bow_path, g_
     rel_path -- path to relation model
     bow_path -- path to dictionary
     g_path -- path to dictionary
+    dct_path -- path to dictionary
 
     """
     ent_perc = pickle.load(open(ent_path))
@@ -398,7 +400,7 @@ def label_all(phrase, dag, candidates, ent_path, ed_path, rel_path, bow_path, g_
         elif phrase[i][1] == 1:
             result.append(label_relation(phrase, rel_lr, bow_dct, g_dct))
         if dag[i]:
-            result += label_edges(phrase, dag, edge_perc, i)
+            result += label_edges(phrase, dag, edge_perc, i, dct_path)
         else:
             result += ['x'] * (len(phrase))
     return result
@@ -770,7 +772,7 @@ if __name__ == "__main__":
         candidates = pickle.load(open(path + "data" + sep + CANDIDATES + "_" + mode + "_" + str(size) + ".pickle"))
         mapped = []
         for i in range(len(phrases)):
-            mapped.append(label_all(phrases[i], dags[i], candidates[i], "ent_lr_trn_641.pickle", "edge_lr_trn.pickle", "relation_lr_trn_641.pickle" "bow_dict_tst_276.pickle", "rel_dict.pickle"))
+            mapped.append(label_all(phrases[i], dags[i], candidates[i], "ent_lr_trn_641.pickle", "edge_lr_trn.pickle", "relation_lr_trn_641.pickle" "bow_dict_tst_276.pickle", "rel_dict.pickle", "edge_dict.pickle"))
         pickle.dump(mapped, open("emapped.pickle","wb"))
 
     # Mode for parsing gold standards from logic formulas
