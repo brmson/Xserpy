@@ -146,7 +146,6 @@ def process_answer(answer, gold_answer):
     return correct or partial
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description="Process one question from dataset")
     parser.add_argument("fpath", help="Path to data", type=str)
     parser.add_argument("size", help="Dataset size", type=int, default=0)
