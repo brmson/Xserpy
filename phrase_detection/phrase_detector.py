@@ -134,7 +134,7 @@ if __name__ == "__main__":
         pickle.dump(empty_weights, open(path + "data" + sep + "empty_weights_" + mode + "_" + str(args.size) + ".pickle","wb"))
 
     # Mode for computing error
-    if 'e' in args.type:
+    elif 'e' in args.type:
         features = pickle.load(open(path + "data" + sep + "phrase_detect_features_tst_276_arr.pickle"))
         weights = pickle.load(open(path + "models" + sep + "w_641_i" + str(args.n_iter) + ".pickle"))
         labels = pickle.load(open(path + "data" + sep + "labels_tst_276.pickle"))

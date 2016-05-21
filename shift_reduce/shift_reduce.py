@@ -408,7 +408,7 @@ def compute_error(dags, gold, seqs):
                 correct += 1
                 total += len(dag)**2
             else:
-                print dag,g
+                # print dag,g
                 for j in range(len(dag)):
                     dd = dag[j]
                     gg = g[j]
@@ -419,8 +419,8 @@ def compute_error(dags, gold, seqs):
                     for ggg in gg:
                         if ggg not in dd:
                             edge_err += 1
-        else:
-            print i
+        # else:
+            # print i
     return noedge_err,edge_err,total,correct
 
 
