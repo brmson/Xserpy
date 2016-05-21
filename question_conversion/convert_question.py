@@ -9,6 +9,15 @@ from query_intention import query_instantiate, entity_linking as el
 
 
 def get_phrases_free(question, model, nlp_path, java_path):
+    """Convert a string question to list of phrases
+
+    Keyword arguments:
+    question -- question in string form
+    model -- model for phrase detection
+    nlp_path -- path to Stanford NLP tagger
+    java_path -- path to Java instalation
+
+    """
     pd_model = pickle.load(open(model))
 
     q = Question(question, "")
@@ -33,6 +42,13 @@ def get_phrases_free(question, model, nlp_path, java_path):
     return labels, pos, q, candidates
 
 def get_phrases(phrase, features):
+    """Convert a question from the dataset to list of phrases
+
+    Keyword arguments:
+    question -- question in object form
+    features -- features for phrase detection
+
+    """
     phrases = []
 
     for U in features:
@@ -43,7 +59,18 @@ def get_phrases(phrase, features):
     return phrases
 
 def convert_question(dag, candidates, question, labels, pos_tagged, filename, path):
+    """Convert a question from dataset to list of phrases
 
+    Keyword arguments:
+    dag -- model for dag parsing
+    candidates -- list of lists of entity candidates
+    question -- question in object form
+    labels -- list of lists phrase tags
+    pos_tagged -- list of lists of POS tags
+    filename -- output file name
+    path -- path to files
+
+    """
     phr, pos = sr.parse_to_phrases([question], [labels], [pos_tagged])
     DAG = sr.shift_reduce(phr[0], pos[0], dag, 50).dag
 
@@ -66,12 +93,18 @@ def convert_question(dag, candidates, question, labels, pos_tagged, filename, pa
     return sq.query_fb_endpoint(query)
 
 def process_answer(answer, gold_answer):
+    """Check correctness of response
+
+    Keyword arguments:
+    answer -- response returned from KB
+    gold_answer -- correct answer
+
+    """
     partial = False
     correct = False
 
     vrs = answer['head']['vars']
     bindings = answer['results']['bindings']
-    # datatypes = [a[vrs[0]]['datatype'] for a in bindings]
     if len(bindings) == 0:
         if gold_answer[0] == '\n ':
             return True
