@@ -367,7 +367,6 @@ def derive_labels(dags, phrases, pos):
             seqs.append(sequence)
         else:
             seqs.append([])
-    print sequences.count(0),sequences.count(1),sequences.count(2),sequences.count(3),'\n'
     return zip(features, sequences),seqs
 
 def batch_shift_reduce(sentences, pos, weights, size):
@@ -408,7 +407,6 @@ def compute_error(dags, gold, seqs):
                 correct += 1
                 total += len(dag)**2
             else:
-                # print dag,g
                 for j in range(len(dag)):
                     dd = dag[j]
                     gg = g[j]
@@ -419,8 +417,6 @@ def compute_error(dags, gold, seqs):
                     for ggg in gg:
                         if ggg not in dd:
                             edge_err += 1
-        # else:
-            # print i
     return noedge_err,edge_err,total,correct
 
 

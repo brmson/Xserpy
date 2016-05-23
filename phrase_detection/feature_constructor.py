@@ -88,7 +88,6 @@ def pos_tag(questions):
     for q in questions:
         text = nltk.word_tokenize(q.utterance)
         tagged.append(nltk.pos_tag(text))
-        print i
         i += 1
     return tagged
 
