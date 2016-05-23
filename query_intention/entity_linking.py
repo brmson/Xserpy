@@ -419,12 +419,9 @@ def get_bow(phrases, rel):
     g_dct = pickle.load(open("rel_dict.pickle"))
     gold = []
     r_bow = []
-    i = 0
-    k = 0
     for j in range(len(phrases)):
         phrase = phrases[j]
         g = rel[j]
-        # g = [pp for pp in ents if pp[:3] != 'en.' and pp[:2] != 'm.']
         v = [pp for pp in phrase if pp[1] == 3]
         r = [pp for pp in phrase if pp[1] == 1]
         if len(v) > 0:
@@ -438,25 +435,20 @@ def get_bow(phrases, rel):
         if len(r) > 0:
             rr = []
             for R in r[0][0].split():
-                # if R not in bow_dct.keys():
-                #     bow_dct[R] = i
-                #     i += 1
                 rr.append(bow_dct[R])
             r_bow.append(rr)
         for G in g:
-            # if G not in g_dct.keys():
-            #     g_dct[G] = k
-            #     k += 1
             gold.append(g_dct[G])
     return bow_dct, v_bow, r_bow, gold
 
-def construct_relation_features(r_bow, v_bow, length):
+def construct_relation_features(r_bow, v_bow, length, phrases):
     """Construct features for relation linking
 
     Keyword arguments:
     r_bow -- list of lists of indexes of relations in questions
     v_bow -- list of lists of indexes of variables in questions
     length -- feature vector size
+    phrases -- list of phrases
 
     """
     features = []
@@ -464,10 +456,13 @@ def construct_relation_features(r_bow, v_bow, length):
         feature = [0] * (length + 7)
         r = r_bow[i]
         v = v_bow[i]
+        p = phrases[i]
+        ents = len([P for P in p if P[1] == 0])
         if v >= 0:
             feature[v] = 1
         for R in r:
             feature[R + 7] = 1
+        feature.append(ents)
         features.append(feature)
     return features
 
@@ -674,23 +669,24 @@ def evaluate_model(X, gold, dct, csf, phrases):
     phrases -- questions
 
     """
-    correct = 1.0
+    correct = 0.0
     rev_dict = dict([(dct[key],key) for key in dct.keys()])
     for i in range(len(X)):
         label = csf.predict(X[i])[0]
         rel = rev_dict[label]
         if gold[i][0] == rel or (gold[i][0][0] == '?' and rel[0] == '?'):
             correct += 1.0
-        else:
             print phrases[i][1], rel, gold[i][0]
+        # else:
+            # print phrases[i][1], rel, gold[i][0]
     print correct/len(X)
 
 if __name__ == "__main__":
     sep = os.path.sep
     parser = argparse.ArgumentParser(description="Obtain entity or relation candidates from Freebase")
     parser.add_argument("fpath", help="Path to features and labels (array format)", type=str)
+    parser.add_argument("n_cand", help="Number of candidates extracted", type=int, default=5)
     parser.add_argument("--size", help="Size of dataset", type=int, default=641)
-    parser.add_argument("n_cand", help="Number of candidates extracted", type=int, default=641)
     parser.add_argument("type", help="Operating mode for script", type=str)
     parser.add_argument("mode", help="Training or testing split", type=str)
     args = parser.parse_args()
@@ -742,10 +738,20 @@ if __name__ == "__main__":
         ent = pickle.load(open('query_gold_rel_trn.pickle'))
         bow_dct, v_bow, r_bow, y = get_bow(phrases, ent)
         length = len(bow_dct.keys())
-        X = construct_relation_features(r_bow, v_bow, length)
-        csf = LinearSVC(max_iter=10000)
+        X = construct_relation_features(r_bow, v_bow, length, phrases)
+        csf = LinearSVC(max_iter=1000)
         csf.fit(X, y)
         pickle.dump(csf, open("relation_lr_trn_641.pickle","wb"))
+
+    # Mode for evaluating relation linking model
+    if 'u' in type:
+        ent = pickle.load(open('query_gold_rel_tst.pickle'))
+        bow_dct, v_bow, r_bow, y_tst = get_bow(phrases, ent)
+        length = len(bow_dct.keys())
+        X_tst = construct_relation_features(r_bow, v_bow, length, phrases)
+        bow_dct = pickle.load(open("rel_dict.pickle"))
+        csf = pickle.load(open("relation_lr_trn_641.pickle"))
+        evaluate_model(X_tst, ent, bow_dct, csf, phrases)
 
     # Mode for obtaining gold standard and features of edges
     if 'l' in type:
