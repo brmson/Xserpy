@@ -145,7 +145,7 @@
 (date 1440 -1 -1)
 (name fb:en.brownsville_brooklyn Brownsville) (name fb:en.brooklyn_navy_yard "Brooklyn Navy Yard") (name fb:en.jamaica_new_york Jamaica) (name fb:en.meatpacking_district_manhattan "Meatpacking District") (name fb:en.long_island_city_queens "Long Island City") (name fb:en.bedford_stuyvesant_brooklyn Bedford-Stuyvesant) (name fb:en.fresh_meadows_queens "Fresh Meadows") (name fb:en.huguenot_staten_island Huguenot) (name fb:en.harlem Harlem) (name fb:en.marble_hill_manhattan "Marble Hill")
 (number 20)
-(number 17840000 fb:en.square_kilometer)
+(number 17840000.0 fb:en.square_kilometer)
 (number 36994)
 (name fb:en.kansas_city_chiefs "Kansas City Chiefs")
 (number 564)
