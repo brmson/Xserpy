@@ -680,9 +680,6 @@ def evaluate_model(X, gold, dct, csf, phrases):
         rel = rev_dict[label]
         if gold[i][0] == rel or (gold[i][0][0] == '?' and rel[0] == '?'):
             correct += 1.0
-            print phrases[i][1], rel, gold[i][0]
-        # else:
-            # print phrases[i][1], rel, gold[i][0]
     print correct/len(X)
 
 if __name__ == "__main__":

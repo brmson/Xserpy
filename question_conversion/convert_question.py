@@ -187,12 +187,15 @@ if __name__ == "__main__":
     correct = 0
 
     if 'i' in type:
-        question = raw_input("Enter question: ")
-        if question[-1] == '?':
-            question = question[:-1]
-        phrases, pos, q, candidates = get_phrases_free(question, model_path, nlp_path, java_path)
-        answer = convert_question(model_dag, candidates[0], q, phrases, pos[0], 'queries' + sep + mode + "_" + str(i+1)+".sparql", "query_intention\\")
-        print convert_answer(answer)
+        again = 'y'
+        while (again == 'y'):
+            question = raw_input("Enter question: ")
+            if question[-1] == '?':
+                question = question[:-1]
+            phrases, pos, q, candidates = get_phrases_free(question, model_path, nlp_path, java_path)
+            answer = convert_question(model_dag, candidates[0], q, phrases, pos[0], 'queries' + sep + mode + "_" + str(i+1)+".sparql", "query_intention\\")
+            print convert_answer(answer)
+            again = raw_input("Next question (y/n): ")
 
     elif 'f' in type:
         questions = [line.strip() for line in ""]
@@ -214,4 +217,4 @@ if __name__ == "__main__":
                     correct += 1
             except Exception, e:
                 print repr(e)
-    print correct
+        print correct
