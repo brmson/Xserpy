@@ -103,29 +103,7 @@ def process_answer(answer, gold_answer):
     partial = False
     correct = False
 
-    vrs = answer['head']['vars']
-    bindings = answer['results']['bindings']
-    if len(bindings) == 0:
-        if gold_answer[0] == '\n ':
-            return True
-        else:
-            return False
-    if len(bindings[0].keys()) == 0:
-        if gold_answer[0] == '\n ':
-            return True
-        else:
-            return False
-    types = [a[vrs[0]]['type'] for a in bindings]
-    values = []
-    for v in vrs:
-        if v in a.keys():
-            values += [a[v]['value'] for a in bindings]
-        else:
-            values += []
-    # if len(vrs) > 1:
-    #     values = [a[vrs[0]]['value'] for a in bindings] + [a[vrs[1]]['value'] for a in bindings]
-    # else:
-    #     values = [a[vrs[0]]['value'] for a in bindings]
+    values = convert_answer(answer)
     gold = [g[1:-3].split() for g in gold_answer]
     for gg in gold:
         for G in gg:
@@ -157,6 +135,22 @@ def process_answer(answer, gold_answer):
     if c == len(values):
         correct = True
     return correct or partial
+
+def convert_answer(answer):
+    vrs = answer['head']['vars']
+    bindings = answer['results']['bindings']
+    if len(bindings) == 0:
+        return []
+    if len(bindings[0].keys()) == 0:
+        return []
+    values = []
+    for a in bindings:
+        for v in vrs:
+            if v in a.keys():
+                values += [a[v]['value'] for a in bindings]
+            else:
+                values += []
+    return values
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process one question from dataset")
@@ -194,14 +188,18 @@ if __name__ == "__main__":
 
     if 'i' in type:
         question = raw_input("Enter question: ")
+        if question[-1] == '?':
+            question = question[:-1]
         phrases, pos, q, candidates = get_phrases_free(question, model_path, nlp_path, java_path)
         answer = convert_question(model_dag, candidates[0], q, phrases, pos[0], 'queries' + sep + mode + "_" + str(i+1)+".sparql", "query_intention\\")
+        print convert_answer(answer)
 
     elif 'f' in type:
         questions = [line.strip() for line in ""]
         for q in questions:
             phrases, pos, q = get_phrases_free(q)
             answer = convert_question(model_dag, candidates[i], q, phrases, pos[0], 'queries' + sep + mode + "_" + str(i+1)+".sparql")
+            print convert_answer(answer)
 
     else:
         for i in range(len(questions)):
