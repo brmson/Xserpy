@@ -266,9 +266,11 @@ def get_edge_features(dct, phrase, k, j):
     feature[start_tag] = 1
     feature[trg_tag + 4] = 1
     for phr in start_phr:
-        feature[dct[phr]] = 1
+        if phr in dct.keys():
+            feature[dct[phr]] = 1
     for phr in trg_phr:
-        feature[dct[phr] + 8 + len(dct.keys())] = 1
+        if phr in dct.keys():
+            feature[dct[phr] + 8 + len(dct.keys())] = 1
     return feature
 
 def edge_gold_standard(phrases, dags, gold_edges):
