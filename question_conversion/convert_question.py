@@ -79,13 +79,13 @@ def convert_question(dag, candidates, question, labels, pos_tagged, filename, pa
     rel_path = path + "relation_lr_trn_641.pickle"
     bow_path = path + "bow_dict_all.pickle"
     g_path = path + "rel_dict.pickle"
-    dct_path = path + "edge_dict"
+    dct_path = path + "edge_dict.pickle"
+    a_path = path + "bow_all_words_dict.pickle"
 
-    intent = el.label_all(phr[0], DAG, candidates, ent_path, edge_path, rel_path, bow_path, g_path, dct_path)
+    intent = el.label_all(phr[0], DAG, candidates, ent_path, edge_path, rel_path, bow_path, g_path, dct_path, a_path)
     queries = sq.convert_to_queries(intent)
-    sq.create_query_file(filename, queries, phr[0])
     if len(queries) > 0:
-        sq.create_query_file(filename, queries, phr[0])
+        # sq.create_query_file(filename, queries, phr[0])
         query = sq.create_query(queries, phr[0])
     else:
         query = "SELECT ?a WHERE {}"
@@ -168,13 +168,13 @@ if __name__ == "__main__":
     type = args.type
 
     sep = os.path.sep
-    model_path = path + "models" + sep + "w_641_i" + str(n_iter) + ".pickle"
+    model_path = path + "models" + sep + "w_641_i50_0.1.pickle"
 
     pos = pickle.load(open("data" + sep + "pos_tagged_" + mode + ".pickle"))
     questions = json.load(open(path+"data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
     features = pickle.load(open(path + "data" + sep + "phrase_detect_features_" + mode + "_" + str(size) + "_arr.pickle"))
     model_phrase = pickle.load(open(model_path))
-    model_dag = pickle.load(open(path+"models" + sep + "w_dag641_i" + str(n_iter_dag) + ".pickle"))
+    model_dag = pickle.load(open(path+"models" + sep + "w_dag641_i20.pickle"))
     candidates = pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
     gold_answers = [(line + " ").split(') ') for line in open('data' + sep + 'free917_' + mode +'_answers.txt')]
     correct = 0
@@ -197,7 +197,7 @@ if __name__ == "__main__":
             u = len(questions[i].utterance.split())
             try:
                 phrases = get_phrases(model_phrase, features[U:U+u])
-                answer = convert_question(model_dag, candidates[i], questions[i], phrases, pos[i], 'queries' + sep + mode + "_" + str(i+1)+".sparql")
+                answer = convert_question(model_dag, candidates[i], questions[i], phrases, pos[i], 'queries' + sep + mode + "_" + str(i+1)+".sparql", path + "query_intention" + sep)
                 if process_answer(answer, gold_answers[i]):
                     correct += 1
             except Exception, e:

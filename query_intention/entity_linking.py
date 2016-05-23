@@ -308,7 +308,7 @@ def lemmatize_word(text):
     lmtzr = WordNetLemmatizer()
     return [lmtzr.lemmatize(t,'v') for t in text]
 
-def label_edges(phrase, dag, w, j, path):
+def label_edges(phrase, dag, w, j, e_dct, a_dct):
     """Label all edges going out of a node given a trained model
 
     Keyword arguments:
@@ -319,13 +319,13 @@ def label_edges(phrase, dag, w, j, path):
     path -- path to dictionary
 
     """
-    d = pickle.load(open(path))
+    d = e_dct
     dct = [''] * len(d.keys())
     for D in d.keys():
         dct[d[D]] = D
     result = ['x'] * len(phrase)
     for d in dag[j]:
-        feature = obtain_edge_features(phrase, dag, d, j)
+        feature = get_edge_features(a_dct, phrase, d, j)
         label = w.predict(feature)
         result[d] = dct[label[0]]
     return result
@@ -359,14 +359,14 @@ def label_relation(phrase, w, bow_dct, g_dct):
 
     """
     r_bow, v_bow = get_idx(phrase, bow_dct)
-    features = construct_relation_features([r_bow],[v_bow], len(bow_dct))[0]
+    features = construct_relation_features([r_bow],[v_bow], len(bow_dct), [phrase])[0]
     label = w.predict(features)[0]
     for k in g_dct.keys():
         if label == g_dct[k]:
             return k
     return 'relation'
 
-def label_all(phrase, dag, candidates, ent_path, ed_path, rel_path, bow_path, g_path, dct_path):
+def label_all(phrase, dag, candidates, ent_path, ed_path, rel_path, bow_path, g_path, dct_path, a_path):
     """Link all phrases and edges in on question to knowledge base given a trained model
 
     Keyword arguments:
@@ -386,6 +386,8 @@ def label_all(phrase, dag, candidates, ent_path, ed_path, rel_path, bow_path, g_
     bow_dct = pickle.load(open(bow_path))
     g_dct = pickle.load(open(g_path))
     edge_perc = pickle.load(open(ed_path))
+    e_dct = pickle.load(open(dct_path))
+    a_dct = pickle.load(open(a_path))
     result = []
     for i in range(len(phrase)):
         e = 0
@@ -400,7 +402,7 @@ def label_all(phrase, dag, candidates, ent_path, ed_path, rel_path, bow_path, g_
         elif phrase[i][1] == 1:
             result.append(label_relation(phrase, rel_lr, bow_dct, g_dct))
         if dag[i]:
-            result += label_edges(phrase, dag, edge_perc, i, dct_path)
+            result += label_edges(phrase, dag, edge_perc, i, e_dct, a_dct)
         else:
             result += ['x'] * (len(phrase))
     return result
