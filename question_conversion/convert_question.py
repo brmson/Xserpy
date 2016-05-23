@@ -116,8 +116,16 @@ def process_answer(answer, gold_answer):
         else:
             return False
     types = [a[vrs[0]]['type'] for a in bindings]
-    values = [a[vrs[0]]['value'] for a in bindings]
-
+    values = []
+    for v in vrs:
+        if v in a.keys():
+            values += [a[v]['value'] for a in bindings]
+        else:
+            values += []
+    # if len(vrs) > 1:
+    #     values = [a[vrs[0]]['value'] for a in bindings] + [a[vrs[1]]['value'] for a in bindings]
+    # else:
+    #     values = [a[vrs[0]]['value'] for a in bindings]
     gold = [g[1:-3].split() for g in gold_answer]
     for gg in gold:
         for G in gg:
@@ -132,7 +140,12 @@ def process_answer(answer, gold_answer):
             value = "\"" + value + "\""
         for g in gold:
             if g[0] == 'date':
-                v = value.split('-')
+                v = []
+                for V in value.split('-'):
+                    if V[0] == '0':
+                        v.append(V[1:])
+                    else:
+                        v.append(V)
                 if g[2][0] == '-':
                     partial = v[0] == g[1]
                 else:
@@ -141,8 +154,8 @@ def process_answer(answer, gold_answer):
             elif value in g:
                 partial = True
                 c += 1
-        if c == len(values):
-            correct = True
+    if c == len(values):
+        correct = True
     return correct or partial
 
 if __name__ == "__main__":
@@ -199,6 +212,7 @@ if __name__ == "__main__":
                 phrases = get_phrases(model_phrase, features[U:U+u])
                 answer = convert_question(model_dag, candidates[i], questions[i], phrases, pos[i], 'queries' + sep + mode + "_" + str(i+1)+".sparql", path + "query_intention" + sep)
                 if process_answer(answer, gold_answers[i]):
+                    print gold_answers[i]
                     correct += 1
             except Exception, e:
                 print repr(e)

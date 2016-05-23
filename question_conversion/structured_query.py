@@ -30,17 +30,20 @@ def convert_to_queries(dag):
                         else:
                             Q = dag[k] + " " + Q
                             query = Q
+                            Q = ""
                     elif edges[j] == ':PO':
                         if len(Q) == 0:
                             Q = dag[index] + " " + dag[k]
                         else:
                             Q = Q + " " + dag[k]
                             query = Q
+                            Q = ""
                     elif edges[j] == ':SC':
                         query = dag[k] + " :type.object.type " + dag[index]
                     else:
                         query = dag[index] + " " + edges[j] + " " + dag[k]
-                    if len(query) > 0 and query.split()[1][0] != '?' :
+                    qs = query.split()
+                    if len(query) > 0 and qs[1][0] != '?' and len(qs) == 3:
                         queries.append(query)
     return queries
 
@@ -55,12 +58,11 @@ def create_query_file(filename, queries, phr):
     """
     f = open(filename, "w")
     f.write("PREFIX : <http://rdf.freebase.com/ns/>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n")
-    select = "?x ?name"
     queries.append('OPTIONAL {?x rdfs:label ?name .\nFILTER (lang(?name) = \'en\')}')
     if ('how many ',3) in phr:
-        f.write("SELECT count(" + select + ") {\n")
+        f += "SELECT count(?x) {\n"
     else:
-        f.write("SELECT " + select + " {\n")
+        f += "SELECT ?x ?name {\n"
     for q in queries:
         f.write(q + ' . \n')
 
@@ -78,12 +80,11 @@ def create_query(queries, phr):
     """
     f = ''
     f += "PREFIX : <http://rdf.freebase.com/ns/>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n"
-    select = "?x ?name"
     queries.append('OPTIONAL {?x rdfs:label ?name .\nFILTER (lang(?name) = \'en\')}')
     if ('how many ',3) in phr:
-        f += "SELECT count(" + select + ") {\n"
+        f += "SELECT count(?x) {\n"
     else:
-        f += "SELECT " + select + " {\n"
+        f += "SELECT ?x ?name {\n"
     for q in queries:
         Q = q.split()
         if Q[1] != Q[2]:
