@@ -459,10 +459,10 @@ if __name__ == "__main__":
     # Mode for parsing all questions and evaluating model
     elif 'b' in args.type:
         weights = pickle.load(open(path + "models" + sep + "w_dag641_i" + str(n_iter) + ".pickle"))
-        labels = pickle.load(open(path + "data" + sep + "gold_dags_" + mode + "_" + str(size) + ".pickle"))
+        labels = pickle.load(open(path + "data" + sep + "gold_dags_tst_276.pickle"))
         phrases, pos = parse_to_phrases(questions, labels_split, pos_tagged)
         d = batch_shift_reduce(phrases, pos, weights, beam)
-        seqs = pickle.load(open(path + "data" + sep + "gold_sequences_" + mode + "_" + str(size) + ".pickle"))
+        seqs = pickle.load(open(path + "data" + sep + "gold_sequences_tst_276.pickle"))
         print compute_error(d,labels, seqs)
     # Mode for training a model
     else:
