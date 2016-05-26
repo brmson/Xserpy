@@ -156,7 +156,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process one question from dataset")
     parser.add_argument("fpath", help="Path to data", type=str)
     parser.add_argument("size", help="Dataset size", type=int, default=0)
-    parser.add_argument("i", help="Index", type=int, default=0)
     parser.add_argument("n_iter", help="Number of iterations", type=int, default=0)
     parser.add_argument("n_iter_dag", help="Number of iterations for DAG training", type=int, default=0)
     parser.add_argument("mode", help="mode", type=str)
@@ -168,20 +167,19 @@ if __name__ == "__main__":
     path = args.fpath
     java_path = args.java_path
     nlp_path = args.nlp_path
-    i = args.i
     n_iter = args.n_iter
     n_iter_dag = args.n_iter_dag
     mode = args.mode
     type = args.type
 
     sep = os.path.sep
-    model_path = path + "models" + sep + "w_641_i50_0.1.pickle"
+    model_path = path + "models" + sep + "w_641_i" + n_iter + "_0.1.pickle"
 
     pos = pickle.load(open("data" + sep + "pos_tagged_" + mode + ".pickle"))
     questions = json.load(open(path+"data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
     features = pickle.load(open(path + "data" + sep + "phrase_detect_features_" + mode + "_" + str(size) + "_arr.pickle"))
     model_phrase = pickle.load(open(model_path))
-    model_dag = pickle.load(open(path+"models" + sep + "w_dag641_i20.pickle"))
+    model_dag = pickle.load(open(path+"models" + sep + "w_dag641_i" + n_iter_dag + ".pickle"))
     candidates = pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
     gold_answers = [(line + " ").split(') ') for line in open('data' + sep + 'free917_' + mode +'_answers.txt')]
     correct = 0
