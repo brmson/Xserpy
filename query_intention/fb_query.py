@@ -1,8 +1,8 @@
 """Obtain information from Freebase"""
-import json, urllib, sys
+import json, urllib, sys, os
 from SPARQLWrapper import SPARQLWrapper, JSON
 
-PATH_TO_KEY = "C:\\Users\\Martin\\PycharmProjects\\xserpy\\query_intention\\.api_key"
+PATH_TO_KEY = os.getcwd() + ".api_key"
 
 def query_freebase_entity(query, scoring, size):
     """Query Freebase for entity candidates
