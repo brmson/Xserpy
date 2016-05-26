@@ -128,7 +128,7 @@ def query_fb_endpoint(query):
 
 if __name__ == "__main__":
     dags = pickle.load(open(sys.argv[2]))
-    phr = pickle.load(open("phrases_100.pickle"))
+    phr = pickle.load(open(sys.argv[3]))
 
     i = int(sys.argv[1])
     q = []
