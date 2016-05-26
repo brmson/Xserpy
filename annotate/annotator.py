@@ -23,8 +23,10 @@ def annotate_questions_label(questions, start):
     Keyword arguments:
     questions -- list of Question objects
     start -- index where to start
+    path -- path to output
 
     """
+    sep = os.path.sep
     labeled = []
     i = 0
     dic = {'e': 0, 'r': 1, 'c': 2, 'v': 3, 'n': 4}
@@ -48,7 +50,7 @@ def annotate_questions_label(questions, start):
         if i % 10 == 0:
             pickle.dump(labeled, open("questions_test_partial.pickle", "wb"))
             print i
-    pickle.dump(labeled, open("questions_test_whole.pickle", "wb"))
+    return labeled, [label for sublist in labeled for label in sublist]
 
 def bootstrap(questions, features, labels, step, n_iter, start, path):
     """Train a model on already labeled subset, label small part of unlabeled subset, train new model, repeat
@@ -222,17 +224,20 @@ if __name__ == "__main__":
     start = args.start
     sep = os.path.sep
 
-    words = pickle.load(open(path+"data" + sep + "phrase_detect_features_" + mode + "_" + str(size) + "_arr.pickle"))
-    labels = pickle.load(open(path+"data" + sep + "labels_" + mode + "_" + str(size) + ".pickle"))
     questions = json.load(open(args.fpath + "data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
 
     # Mode for bootstraping
     if 'b' in type:
+
+        words = pickle.load(open(path+"data" + sep + "phrase_detect_features_" + mode + "_" + str(size) + "_arr.pickle"))
+        labels = pickle.load(open(path+"data" + sep + "labels_" + mode + "_" + str(size) + ".pickle"))
         step = 40
         n_iter = 50
         examples = bootstrap(questions, words, labels, step, n_iter, start, path)
-        pickle.dump(examples, open(path+"data\\b_examples" + mode + "_" + str(size) + ".pickle", "wb"))
+        pickle.dump(examples, open(path+"data" + sep + "b_examples" + mode + "_" + str(size) + ".pickle", "wb"))
 
     # Mode for labelling words with phrase labels
     elif 'l' in type:
-        annotate_questions_label(questions, start)
+        questions, labels = annotate_questions_label(questions, start)
+        pickle.dump(questions, open(path + "data" + sep + "questions_" + mode + "_" + str(size) +".pickle", "wb"))
+        pickle.dump(labels, open(path + "data" + sep + "labels_" + mode + "_" + str(size) +".pickle", "wb"))
