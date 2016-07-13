@@ -89,9 +89,9 @@ def get_feature(phrase, candidates):
         overlap = len(s) - len(s.replace(ph, ''))
         if overlap > 0:
             feature[len(candidates)*5 + i] = overlap
-
-        if 'id' in c.keys():
-            c_id = c['id'][4:]
+        cc = 'detailedDescription' if 'detailedDescription' in c.keys() else 'id'
+        if cc in c.keys():
+            c_id = c[cc][4:] if cc == 'id' else c_id = c[cc]['url'][29:].lower()
             if ph_id == c_id:
                 feature[len(candidates)*6 + i] = 1
             elif c_id.startswith(ph_id):
