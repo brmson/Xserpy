@@ -50,5 +50,5 @@ Requires all models, dictionaries, ``free917_(trn/tst)_answers.txt`` and ``pos_t
 * a – answers questions from dataset and evaluates them on gold standard answers
 
 
- ## Credits
+## Credits
   * **https://github.com/pks/rebol** - for answers for Free917 questions

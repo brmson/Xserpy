@@ -5,6 +5,13 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 PATH_TO_KEY = os.getcwd() + os.path.sep + ".api_key"
 
 def query_kg_entity(query, size):
+    """Query Knowledge Graph for entity candidates
+
+    Keyword arguments:
+    query -- natural language text query
+    size -- number of candidates returned
+
+    """
     api_key = open(PATH_TO_KEY).read()
     service_url = 'https://kgsearch.googleapis.com/v1/entities:search'
     params = {
@@ -70,6 +77,7 @@ def query_fb_property_sparql(mid, url):
 
     Keyword arguments:
     mid -- machine ID of desired entity
+    url -- URL of Freebase endpoint
 
     """
     sparql = SPARQLWrapper(url)
@@ -80,6 +88,13 @@ def query_fb_property_sparql(mid, url):
     return [r['x']['value'][27:] for r in results]
 
 def get_qid_sparql(mid, url):
+    """Convert Freebase MID to Wikidata QID
+
+    Keyword arguments:
+    mid -- Freebase machine ID
+    url -- URL of Wikidata SPARQL endpoint
+
+    """
     sparql = SPARQLWrapper(url)
     sparql.setReturnFormat(JSON)
     query = "PREFIX wdt: <http://www.wikidata.org/prop/direct/> SELECT * WHERE {   	?a wdt:P646 \"" + mid + "\" 	}"
