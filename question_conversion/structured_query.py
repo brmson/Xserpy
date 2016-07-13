@@ -113,14 +113,14 @@ def get_entity_names(dag):
             index += 1
     return result
 
-def query_fb_endpoint(query):
+def query_fb_endpoint(query, url):
     """Send request for data to Freebase endpoint
 
     Keyword arguments:
     query -- query in string representation
 
     """
-    sparql = SPARQLWrapper('http://freebase.ailao.eu:3030/freebase/query')
+    sparql = SPARQLWrapper(url)
     sparql.setReturnFormat(JSON)
     sparql.setQuery(query)
     return sparql.query().convert()
