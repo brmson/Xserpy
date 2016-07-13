@@ -10,7 +10,7 @@ def query_kg_entity(query, size):
     params = {
             'query': query,
             'key': api_key,
-            # 'languages' : ['en'],
+            'languages' : 'en,cs',
             'limit': size
     }
     url = service_url + '?' + urllib.urlencode(params)
