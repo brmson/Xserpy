@@ -2,7 +2,23 @@
 import json, urllib, sys, os
 from SPARQLWrapper import SPARQLWrapper, JSON
 
-PATH_TO_KEY = os.getcwd() + ".api_key"
+PATH_TO_KEY = os.getcwd() + os.path.sep + os.path.sep + ".api_key"
+
+def query_kg_entity(query, size):
+    api_key = open(PATH_TO_KEY).read()
+    service_url = 'https://kgsearch.googleapis.com/v1/entities:search'
+    params = {
+            'query': query,
+            'key': api_key,
+            # 'languages' : ['en'],
+            'limit': size
+    }
+    url = service_url + '?' + urllib.urlencode(params)
+    response = json.loads(urllib.urlopen(url).read())
+    result = []
+    for r in response['itemListElement']:
+        result.append(r['result']['@id'])
+    return result
 
 def query_freebase_entity(query, scoring, size):
     """Query Freebase for entity candidates
@@ -15,7 +31,6 @@ def query_freebase_entity(query, scoring, size):
     """
     api_key = open(PATH_TO_KEY).read()
     service_url = 'https://www.googleapis.com/freebase/v1/search'
-    # Different URL: https://kgsearch.googleapis.com/v1/entities:search
     params = {
             'query': query,
             'key': api_key,
@@ -66,7 +81,8 @@ def query_fb_property_sparql(mid, url):
 
 if __name__ == "__main__":
     url = sys.argv[2]
-    entity = query_freebase_entity(sys.argv[1],'freebase', 5)[0]
-    candidates = query_fb_property_sparql(entity['mid'])
-    for c in candidates:
+    # entity = query_freebase_entity(sys.argv[1],'freebase', 5)
+    entity = query_kg_entity(sys.argv[1], 5)
+    # candidates = query_fb_property_sparql(entity['mid'])
+    for c in entity:
         print c
