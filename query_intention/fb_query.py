@@ -2,7 +2,7 @@
 import json, urllib, sys, os
 from SPARQLWrapper import SPARQLWrapper, JSON
 
-PATH_TO_KEY = os.getcwd() + os.path.sep + os.path.sep + ".api_key"
+PATH_TO_KEY = os.getcwd() + os.path.sep + ".api_key"
 
 def query_kg_entity(query, size):
     api_key = open(PATH_TO_KEY).read()
@@ -17,7 +17,7 @@ def query_kg_entity(query, size):
     response = json.loads(urllib.urlopen(url).read())
     result = []
     for r in response['itemListElement']:
-        result.append(r['result']['@id'])
+        result.append(r['result'])
     return result
 
 def query_freebase_entity(query, scoring, size):
@@ -79,10 +79,21 @@ def query_fb_property_sparql(mid, url):
     results = sparql.query().convert()['results']['bindings']
     return [r['x']['value'][27:] for r in results]
 
+def get_qid_sparql(mid, url):
+    sparql = SPARQLWrapper(url)
+    sparql.setReturnFormat(JSON)
+    query = "PREFIX wdt: <http://www.wikidata.org/prop/direct/> SELECT * WHERE {   	?a wdt:P646 \"" + mid + "\" 	}"
+    sparql.setQuery(query)
+    results = sparql.query().convert()['results']['bindings']
+    return results[0]['a']['value'][31:]
+
 if __name__ == "__main__":
     url = sys.argv[2]
     # entity = query_freebase_entity(sys.argv[1],'freebase', 5)
+    # for c in entity:
+    #     print c
     entity = query_kg_entity(sys.argv[1], 5)
     # candidates = query_fb_property_sparql(entity['mid'])
+    url = "https://query.wikidata.org/bigdata/namespace/wdq/sparql"
     for c in entity:
-        print c
+        print get_qid_sparql(c['@id'][3:], url)
