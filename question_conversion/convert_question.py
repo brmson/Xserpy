@@ -90,7 +90,7 @@ def convert_question(dag, candidates, question, labels, pos_tagged, filename, pa
     else:
         query = "SELECT ?a WHERE {}"
 
-    return sq.query_fb_endpoint(query)
+    return sq.query_fb_endpoint(query, 'http://freebase.ailao.eu:3030/freebase/query')
 
 def process_answer(answer, gold_answer):
     """Check correctness of response
@@ -173,13 +173,13 @@ if __name__ == "__main__":
     type = args.type
 
     sep = os.path.sep
-    model_path = path + "models" + sep + "w_641_i" + n_iter + "_0.1.pickle"
+    model_path = path + "models" + sep + "w_641_i" + str(n_iter) + "_0.1.pickle"
 
     pos = pickle.load(open("data" + sep + "pos_tagged_" + mode + ".pickle"))
     questions = json.load(open(path+"data" + sep + "free917." + mode + ".examples.canonicalized.json"), object_hook=object_decoder)
     features = pickle.load(open(path + "data" + sep + "phrase_detect_features_" + mode + "_" + str(size) + "_arr.pickle"))
     model_phrase = pickle.load(open(model_path))
-    model_dag = pickle.load(open(path+"models" + sep + "w_dag641_i" + n_iter_dag + ".pickle"))
+    model_dag = pickle.load(open(path+"models" + sep + "w_dag641_i" + str(n_iter_dag) + ".pickle"))
     candidates = pickle.load(open(path + "data" + sep + "candidates_" + mode + "_" + str(size) + ".pickle"))
     gold_answers = [(line + " ").split(') ') for line in open('data' + sep + 'free917_' + mode +'_answers.txt')]
     correct = 0
@@ -191,15 +191,15 @@ if __name__ == "__main__":
             if question[-1] == '?':
                 question = question[:-1]
             phrases, pos, q, candidates = get_phrases_free(question, model_path, nlp_path, java_path)
-            answer = convert_question(model_dag, candidates[0], q, phrases, pos[0], 'queries' + sep + mode + "_" + str(i+1)+".sparql", "query_intention\\")
+            answer = convert_question(model_dag, candidates[0], q, phrases, pos[0], 'queries' + sep + mode + "_0.sparql", "query_intention\\")
             print convert_answer(answer)
             again = raw_input("Next question (y/n): ")
 
     elif 'f' in type:
         questions = [line.strip() for line in ""]
         for q in questions:
-            phrases, pos, q = get_phrases_free(q)
-            answer = convert_question(model_dag, candidates[i], q, phrases, pos[0], 'queries' + sep + mode + "_" + str(i+1)+".sparql")
+            phrases, pos, q, candidates = get_phrases_free(q)
+            answer = convert_question(model_dag, candidates[0], q, phrases, pos[0], 'queries' + sep + mode + "_" + str(1)+".sparql")
             print convert_answer(answer)
 
     else:
