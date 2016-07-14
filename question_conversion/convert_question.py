@@ -151,6 +151,27 @@ def convert_answer(answer):
                 values[v].append(a[v]['value'])
     return values
 
+def print_answers(answers):
+    if len(answers['name']) == 0:
+        length = 42
+        print '-'*length
+        headers = answers.keys()[0]
+        print '|' + 'Answer'.rjust(39, ' ') + ' |'
+        print '-'*length
+        for a in answers[headers]:
+            print '|' + a.rjust(39, ' ') + ' |'
+        print '-'*length
+    else:
+        length = 83
+        print '-'*length
+        headers = answers.keys()
+        print '|' + 'Answer'.rjust(39, ' ') + ' |' + 'URL'.rjust(39, ' ') + ' |'
+        print '-'*length
+        for a in zip(answers[headers[0]], answers[headers[1]]):
+            print '|' + a[1].rjust(39, ' ') + ' |' + a[0].rjust(39, ' ') + ' |'
+        print '-'*length
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Process one question from dataset")
     parser.add_argument("fpath", help="Path to data", type=str)
@@ -191,7 +212,7 @@ if __name__ == "__main__":
                 question = question[:-1]
             phrases, pos, q, candidates = get_phrases_free(question, model_path, nlp_path, java_path)
             answer = convert_question(model_dag, candidates[0], q, phrases, pos[0], 'queries' + sep + mode + "_0.sparql", "query_intention\\")
-            print convert_answer(answer)
+            print_answers(convert_answer(answer))
             again = raw_input("Next question (y/n): ")
 
     elif 'f' in type:
