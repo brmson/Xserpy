@@ -143,13 +143,12 @@ def convert_answer(answer):
         return []
     if len(bindings[0].keys()) == 0:
         return []
-    values = []
-    for a in bindings:
-        for v in vrs:
+    values = {}
+    for v in vrs:
+        values[v] = []
+        for a in bindings:
             if v in a.keys():
-                values += [a[v]['value'] for a in bindings]
-            else:
-                values += []
+                values[v].append(a[v]['value'])
     return values
 
 if __name__ == "__main__":
