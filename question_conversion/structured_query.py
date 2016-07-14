@@ -59,7 +59,7 @@ def create_query_file(filename, queries, phr):
     f = open(filename, "w")
     f.write("PREFIX : <http://rdf.freebase.com/ns/>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n")
     queries.append('OPTIONAL {?x rdfs:label ?name .\nFILTER (lang(?name) = \'en\')}')
-    if ('how many ',3) in phr:
+    if ('how many ',3) in phr or ('How many ',3) in phr:
         f += "SELECT count(?x) {\n"
     else:
         f += "SELECT ?x ?name {\n"
@@ -81,7 +81,7 @@ def create_query(queries, phr):
     f = ''
     f += "PREFIX : <http://rdf.freebase.com/ns/>\nPREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\nPREFIX xsd: <http://www.w3.org/2001/XMLSchema#>\n"
     queries.append('OPTIONAL {?x rdfs:label ?name .\nFILTER (lang(?name) = \'en\')}')
-    if ('how many ',3) in phr:
+    if ('how many ',3) in phr or ('How many ',3) in phr:
         f += "SELECT count(?x) {\n"
     else:
         f += "SELECT ?x ?name {\n"
