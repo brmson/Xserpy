@@ -140,9 +140,9 @@ def convert_answer(answer):
     vrs = answer['head']['vars']
     bindings = answer['results']['bindings']
     if len(bindings) == 0:
-        return []
+        return {}
     if len(bindings[0].keys()) == 0:
-        return []
+        return {}
     values = {}
     for v in vrs:
         values[v] = []
@@ -152,24 +152,17 @@ def convert_answer(answer):
     return values
 
 def print_answers(answers):
-    if len(answers['name']) == 0:
-        length = 42
-        print '-'*length
-        headers = answers.keys()[0]
-        print '|' + 'Answer'.rjust(39, ' ') + ' |'
-        print '-'*length
-        for a in answers[headers]:
-            print '|' + a.rjust(39, ' ') + ' |'
-        print '-'*length
-    else:
-        length = 83
-        print '-'*length
-        headers = answers.keys()
-        print '|' + 'Answer'.rjust(39, ' ') + ' |' + 'URL'.rjust(39, ' ') + ' |'
-        print '-'*length
-        for a in zip(answers[headers[0]], answers[headers[1]]):
-            print '|' + a[1].rjust(39, ' ') + ' |' + a[0].rjust(39, ' ') + ' |'
-        print '-'*length
+    if len(answers.keys()) == 0:
+        print "Answer not found"
+        return 1
+    v = '.1' if '.1' in answers.keys() else 'x' if len(answers['name']) == 0 else 'name'
+    length = max(11, max([len(A) for A in answers[v]]) + 5)
+    print '-'*length
+    print '|' + 'Answer'.rjust(length-3, ' ') + ' |'
+    print '-'*length
+    for a in answers[v]:
+        print '|' + a.rjust(length-3, ' ') + ' |'
+    print '-'*length
 
 
 if __name__ == "__main__":
